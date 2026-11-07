@@ -45,10 +45,10 @@ import java.io.File
 class DroneLink(private val ctx: Context, @Volatile override var listener: Listener) : Link {
 
     enum class Mode(val label: String, val product: ARDISCOVERY_PRODUCT_ENUM, val ip: String, val ftpPort: Int, val usb: Boolean = false) {
-        SKYCONTROLLER2_USB("SkyController 2 · cable USB (como Pix4D)", ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2, "", ARUtilsManager.FTP_FLIGHTPLAN, usb = true),
-        BLUEGRASS_WIFI("Bluegrass · WiFi directa", ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_CHIMERA, "192.168.42.1", ARUtilsManager.FTP_FLIGHTPLAN),
-        DISCO_WIFI("Disco · WiFi directa", ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_EVINRUDE, "192.168.42.1", ARUtilsManager.FTP_FLIGHTPLAN),
-        SKYCONTROLLER2_WIFI("SkyController 2 · WiFi (experimental)", ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2, "192.168.53.1", ARUtilsManager.FTP_FLIGHTPLAN_SKY);
+        SKYCONTROLLER2_USB(tr("SkyController 2 · cable USB (como Pix4D)"), ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2, "", ARUtilsManager.FTP_FLIGHTPLAN, usb = true),
+        BLUEGRASS_WIFI(tr("Bluegrass · WiFi directa"), ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_CHIMERA, "192.168.42.1", ARUtilsManager.FTP_FLIGHTPLAN),
+        DISCO_WIFI(tr("Disco · WiFi directa"), ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_EVINRUDE, "192.168.42.1", ARUtilsManager.FTP_FLIGHTPLAN),
+        SKYCONTROLLER2_WIFI(tr("SkyController 2 · WiFi (experimental)"), ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2, "192.168.53.1", ARUtilsManager.FTP_FLIGHTPLAN_SKY);
         override fun toString() = label
     }
 
@@ -106,19 +106,19 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         fun alerts(): List<String> {
             val a = ArrayList<String>()
             when (alert) {
-                1 -> a.add("⛔ Emergencia activada")
-                2 -> a.add("⛔ Corte de motores (cut-out)")
-                3 -> a.add("⛔ BATERÍA CRÍTICA")
-                4 -> a.add("⚠ Batería baja (aviso del dron)")
-                5 -> a.add("⚠ Inclinación excesiva")
+                1 -> a.add(tr("⛔ Emergencia activada"))
+                2 -> a.add(tr("⛔ Corte de motores (cut-out)"))
+                3 -> a.add(tr("⛔ BATERÍA CRÍTICA"))
+                4 -> a.add(tr("⚠ Batería baja (aviso del dron)"))
+                5 -> a.add(tr("⚠ Inclinación excesiva"))
             }
-            if (motorError != 0) a.add("⛔ Error de motor: ${MOTOR_ERRORS.getOrElse(motorError) { "código $motorError" }}")
-            when (wind) { 1 -> a.add("⚠ Viento fuerte"); 2 -> a.add("⛔ Viento demasiado fuerte") }
-            when (rthBattery) { 1 -> a.add("⚠ Batería justa para volver a casa"); 2 -> a.add("⛔ Batería insuficiente para volver a casa") }
+            if (motorError != 0) a.add(trf("⛔ Error de motor: %1\$s", MOTOR_ERRORS.getOrElse(motorError) { "código $motorError" }))
+            when (wind) { 1 -> a.add(tr("⚠ Viento fuerte")); 2 -> a.add(tr("⛔ Viento demasiado fuerte")) }
+            when (rthBattery) { 1 -> a.add(tr("⚠ Batería justa para volver a casa")); 2 -> a.add(tr("⛔ Batería insuficiente para volver a casa")) }
             if (navigateHome == "en curso" && navHomeReason in 0..2)
-                a.add("↩ Volviendo a casa: " + arrayOf("pedido por ti", "enlace perdido", "BATERÍA BAJA")[navHomeReason])
-            sensors.filterValues { !it }.keys.forEach { a.add("⚠ Sensor con fallo: $it") }
-            if (planError.isNotEmpty()) a.add("⚠ Plan: $planError")
+                a.add(tr("↩ Volviendo a casa: ") + arrayOf(tr("pedido por ti"), tr("enlace perdido"), tr("BATERÍA BAJA"))[navHomeReason])
+            sensors.filterValues { !it }.keys.forEach { a.add(trf("⚠ Sensor con fallo: %1\$s", it)) }
+            if (planError.isNotEmpty()) a.add(trf("⚠ Plan: %1\$s", planError))
             a.addAll(extraAlerts)
             return a.sortedBy { if (it.startsWith("⛔")) 0 else 1 }
         }
@@ -161,29 +161,30 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         private val NATIVE_ERRORS = mapOf(
             0 to "OK", -1000 to "ERROR", -999 to "NOT_IMPLEMENTED", -998 to "ALLOC", -997 to "BAD_PARAMETER",
             -996 to "MUTEX", -995 to "INIT_MUTEX", -994 to "STATE", -993 to "BUFFER_SIZE",
-            -2000 to "INIT", -1999 to "INIT_THREAD", -1998 to "INIT_ARNETWORKAL_MANAGER (no se alcanza el dispositivo)",
+            -2000 to "INIT", -1999 to "INIT_THREAD", -1998 to tr("INIT_ARNETWORKAL_MANAGER (no se alcanza el dispositivo)"),
             -1997 to "INIT_ARNETWORK_MANAGER", -1996 to "INIT_NETWORK_CONFIG", -1995 to "INIT_DEVICE_COPY",
             -1994 to "INIT_DEVICE_GET_NETWORK_CONFIG", -1993 to "INIT_DEVICE_JSON_CALLBACK", -1992 to "INIT_GET_DATE",
             -1991 to "INIT_GET_TIME", -1990 to "INIT_STREAM", -1989 to "INIT_SEMAPHORE", -1988 to "NOT_SENT",
             -1987 to "NO_VIDEO", -1986 to "NO_AUDIO", -1985 to "NO_ELEMENT", -1984 to "NO_ARGUMENTS",
-            -1983 to "CANCELED (conexión cortada durante el arranque)", -1982 to "COMMAND_GENERATING",
+            -1983 to tr("CANCELED (conexión cortada durante el arranque)"), -1982 to "COMMAND_GENERATING",
             -3000 to "COMMAND_CALLBACK", -2999 to "COMMAND_CALLBACK_ALREADY_REGISTERED", -2998 to "COMMAND_CALLBACK_NOT_REGISTERED",
             -6000 to "JNI", -5999 to "JNI_ENV", -5998 to "JNI_INIT", -7000 to "EXTENSION", -6999 to "EXTENSION_PRODUCT_NOT_VALID"
         )
         fun errName(e: ARCONTROLLER_ERROR_ENUM?): String =
-            if (e == null) "desconocido" else (NATIVE_ERRORS[e.value] ?: "código ${e.value}")
+            if (e == null) tr("desconocido") else (NATIVE_ERRORS[e.value] ?: trf("código %1\$s", e.value))
         const val REMOTE_PLAN_NAME = "flightPlan.mavlink"
 
         private val FLYING_STATES = arrayOf(
-            "en tierra", "despegando", "en estacionario", "volando",
-            "aterrizando", "EMERGENCIA", "esperando usuario", "motores arrancando",
-            "aterrizaje de emergencia"
+            tr("en tierra"), tr("despegando"), tr("en estacionario"), tr("volando"),
+            tr("aterrizando"), tr("EMERGENCIA"), tr("esperando usuario"), tr("motores arrancando"),
+            tr("aterrizaje de emergencia")
         )
         // Órdenes verificadas contra los enums de ARSDK 3.14.
-        private val MAV_STATES = arrayOf("EJECUTANDO", "PARADO", "PAUSADO", "CARGADO (arranca al despegar)")
-        private val MAV_ERRORS = arrayOf("ninguno", "no está en modo exterior", "sin fix GPS", "magnetómetro sin calibrar")
-        private val COMPONENTS = arrayOf("GPS", "Calibración", "Fichero de plan", "Despegue", "Dentro de geocerca", "Cámara")
-        private val NAV_HOME = arrayOf("disponible", "en curso", "no disponible", "pendiente")
+        private val MAV_STATES = arrayOf(tr("EJECUTANDO"), tr("PARADO"), tr("PAUSADO"), tr("CARGADO (arranca al despegar)"))
+        private val MAV_ERRORS = arrayOf(tr("ninguno"), tr("no está en modo exterior"), tr("sin fix GPS"), tr("magnetómetro sin calibrar"))
+        private val COMPONENTS = arrayOf("GPS", tr("Calibración"), tr("Fichero de plan"), tr("Despegue"), tr("Dentro de geocerca"), tr("Cámara"))
+        // «en curso» NO se traduce aquí: la app lo compara; se traduce al mostrarlo.
+        private val NAV_HOME = arrayOf(tr("disponible"), "en curso", tr("no disponible"), tr("pendiente"))
         private val LIST_KEYS = setOf(
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT",
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED",
@@ -191,12 +192,12 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED",
             "ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES",
             "ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_MASSSTORAGECONTENT")
-        private val NAV_HOME_REASON = arrayOf("pedido por el usuario", "enlace perdido", "BATERÍA BAJA", "terminado", "detenido", "desactivado por el dron", "activado por el dron")
-        private val ALERTS = arrayOf("sin alerta", "emergencia", "corte de motores", "BATERÍA CRÍTICA", "batería baja", "inclinación excesiva")
-        private val SENSORS = arrayOf("IMU", "Barómetro", "Ultrasonidos", "GPS", "Magnetómetro", "Cámara vertical")
-        val MOTOR_ERRORS = arrayOf("sin error", "EEPROM", "motor bloqueado", "seguridad de hélice", "comunicación con motor",
-            "parada de emergencia RC", "tiempo real del controlador", "ajustes de motor", "temperatura", "voltaje de batería",
-            "número de celdas", "MOSFET / fases del motor", "HAL", "aserción BLDC")
+        private val NAV_HOME_REASON = arrayOf(tr("pedido por el usuario"), tr("enlace perdido"), tr("BATERÍA BAJA"), tr("terminado"), tr("detenido"), tr("desactivado por el dron"), tr("activado por el dron"))
+        private val ALERTS = arrayOf(tr("sin alerta"), tr("emergencia"), tr("corte de motores"), tr("BATERÍA CRÍTICA"), tr("batería baja"), tr("inclinación excesiva"))
+        private val SENSORS = arrayOf("IMU", tr("Barómetro"), tr("Ultrasonidos"), "GPS", tr("Magnetómetro"), tr("Cámara vertical"))
+        val MOTOR_ERRORS = arrayOf(tr("sin error"), "EEPROM", tr("motor bloqueado"), tr("seguridad de hélice"), tr("comunicación con motor"),
+            tr("parada de emergencia RC"), tr("tiempo real del controlador"), tr("ajustes de motor"), tr("temperatura"), tr("voltaje de batería"),
+            tr("número de celdas"), tr("MOSFET / fases del motor"), "HAL", tr("aserción BLDC"))
     }
 
     // ---------------------------------------------------------------- conexión
@@ -209,29 +210,29 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
             val caps = cm.getNetworkCapabilities(n) ?: continue
             if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) { wifi = n; break }
         }
-        if (wifi == null) { log("No hay red WiFi activa. Conecta el móvil a la WiFi del dron/mando."); return false }
+        if (wifi == null) { log(tr("No hay red WiFi activa. Conecta el móvil a la WiFi del dron/mando.")); return false }
         val ok = cm.bindProcessToNetwork(wifi)
-        log(if (ok) "Tráfico ligado a la WiFi (los datos móviles no interfieren)." else "No se pudo ligar el tráfico a la WiFi.")
+        log(if (ok) tr("Tráfico ligado a la WiFi (los datos móviles no interfieren).") else tr("No se pudo ligar el tráfico a la WiFi."))
         return ok
     }
 
     override fun connect(choice: ConnectChoice) { connect(choice.arsdkMode ?: return) }
 
     fun connect(m: Mode) {
-        if (controller != null || connecting) { log("Ya hay una conexión abierta o en curso."); return }
+        if (controller != null || connecting) { log(tr("Ya hay una conexión abierta o en curso.")); return }
         connecting = true
-        telemetry.connection = "conectando…"
+        telemetry.connection = tr("conectando…")
         listener.onTelemetry(telemetry)
         mode = m
-        if (!loadLibs()) { log("ERROR: no se cargaron las librerías ARSDK."); connectFailed(); return }
+        if (!loadLibs()) { log(tr("ERROR: no se cargaron las librerías ARSDK.")); connectFailed(); return }
         val mux = if (m.usb) UsbMux.ensure(ctx) else null
         if (m.usb && mux == null) { connectFailed(); return }
         if (m.usb) {
             (ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).bindProcessToNetwork(null)
-            log("Conectando por USB al SkyController 2 …")
+            log(tr("Conectando por USB al SkyController 2 …"))
         } else {
             bindToWifi()
-            log("Conectando a ${m.label} en ${m.ip}:44444 …")
+            log(trf("Conectando a %1\$s en %2\$s:44444 …", m.label, m.ip))
         }
         Thread {
             try {
@@ -242,7 +243,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                           else device.initWifi(m.product, "racoon-mapper", m.ip, 44444)
                 Crumbs.write("connect: init → $err")
                 if (err != ARDISCOVERY_ERROR_ENUM.ARDISCOVERY_OK) {
-                    log("ERROR discovery: $err"); device.dispose(); connectFailed(); return@Thread
+                    log(trf("ERROR discovery: %1\$s", err)); device.dispose(); connectFailed(); return@Thread
                 }
                 Crumbs.write("connect: new ARDeviceController")
                 val c = ARDeviceController(device)
@@ -254,13 +255,13 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 val e = c.start()
                 Crumbs.write("connect: start → ${errName(e)}")
                 if (e != ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK) {
-                    log("ERROR al arrancar el controlador: ${errName(e)}")
+                    log(trf("ERROR al arrancar el controlador: %1\$s", errName(e)))
                     controller = null
                     c.dispose()
                     connectFailed()
                 }
             } catch (t: Throwable) {
-                log("ERROR conectando: ${t.javaClass.simpleName}: ${t.message}")
+                log(trf("ERROR conectando: %1\$s: %2\$s", t.javaClass.simpleName, t.message))
                 controller = null
                 connectFailed()
             }
@@ -279,11 +280,11 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
     override fun disconnect() {
         val c = controller
         if (c == null) {
-            if (connecting) log("Conexión en curso; espera unos segundos y vuelve a pulsar.")
+            if (connecting) log(tr("Conexión en curso; espera unos segundos y vuelve a pulsar."))
             return
         }
-        log("Desconectando…")
-        Thread { try { c.stop() } catch (t: Throwable) { log("stop(): ${t.message}") } }.start()
+        log(tr("Desconectando…"))
+        Thread { try { c.stop() } catch (t: Throwable) { log(trf("stop(): %1\$s", t.message)) } }.start()
     }
 
     private fun releaseController() {
@@ -298,25 +299,25 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
 
     /** Sube el plan por FTP (puerto 61 o 161 vía SkyController) como "flightPlan.mavlink". */
     override fun uploadPlan(plan: FlightPlan, done: (Boolean) -> Unit) {
-        if (uploading) { log("Ya hay una subida en curso."); return }
-        if (!loadLibs()) { log("ERROR: ARSDK no cargado."); done(false); return }
+        if (uploading) { log(tr("Ya hay una subida en curso.")); return }
+        if (!loadLibs()) { log(tr("ERROR: ARSDK no cargado.")); done(false); return }
         uploading = true
         val local = File(ctx.cacheDir, REMOTE_PLAN_NAME)
         local.writeText(plan.text)
         val m = mode
-        log(if (m.usb) "Subiendo plan por USB (vía SkyController) …" else "Subiendo plan a ${m.ip}:${m.ftpPort} …")
+        log(if (m.usb) tr("Subiendo plan por USB (vía SkyController) …") else trf("Subiendo plan a %1\$s:%2\$s …", m.ip, m.ftpPort))
         Thread {
             var ok = false
             val ftp = ARUtilsManager()
             val dt = ARDataTransferManager()
             try {
                 val e = if (m.usb) {
-                    val mux = UsbMux.mux ?: throw IllegalStateException("canal USB cerrado")
+                    val mux = UsbMux.mux ?: throw IllegalStateException(tr("canal USB cerrado"))
                     val ref = mux.newMuxRef()
                     try { ftp.initWifiFtp(ref, "drone", m.ftpPort, ARUtilsManager.FTP_ANONYMOUS, "") } finally { ref.release() }
                 } else ftp.initWifiFtp(m.ip, m.ftpPort, ARUtilsManager.FTP_ANONYMOUS, "")
                 if (e != ARUTILS_ERROR_ENUM.ARUTILS_OK) {
-                    log("ERROR FTP init: $e")
+                    log(trf("ERROR FTP init: %1\$s", e))
                 } else {
                     val progress = java.util.concurrent.atomic.AtomicReference(0f)
                     val result = java.util.concurrent.atomic.AtomicReference<ARDATATRANSFER_ERROR_ENUM?>(null)
@@ -331,17 +332,17 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     if (th.isAlive) {
                         timedOut = true
                         up.cancelThread()
-                        log("ERROR: subida sin respuesta en 30 s, cancelando…")
+                        log(tr("ERROR: subida sin respuesta en 30 s, cancelando…"))
                         th.join() // nunca liberar objetos nativos con el hilo aún dentro (como Pix4D)
                     }
                     up.dispose()
                     // Mismo criterio que Pix4D: vale si OK o si llegó al 100 %.
                     ok = !timedOut && (result.get() == ARDATATRANSFER_ERROR_ENUM.ARDATATRANSFER_OK || progress.get() >= 100f)
-                    log(if (ok) "Plan subido (${local.length()} bytes)." else "ERROR subida: ${result.get()} (progreso ${progress.get().toInt()} %)")
+                    log(if (ok) trf("Plan subido (%1\$s bytes).", local.length()) else trf("ERROR subida: %1\$s (progreso %2\$s %%)", result.get(), progress.get().toInt()))
                     ftp.closeWifiFtp()
                 }
             } catch (t: Throwable) {
-                log("ERROR subida: ${t.javaClass.simpleName}: ${t.message}")
+                log(trf("ERROR subida: %1\$s: %2\$s", t.javaClass.simpleName, t.message))
             } finally {
                 try { dt.dispose() } catch (_: Throwable) {}
                 try { ftp.dispose() } catch (_: Throwable) {}
@@ -357,7 +358,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
     private fun common(): ARFeatureCommon? = controller?.featureCommon
 
     private fun check(what: String, e: ARCONTROLLER_ERROR_ENUM?) {
-        if (e == null) log("$what: sin controlador")
+        if (e == null) log(trf("%1\$s: sin controlador", what))
         else if (e != ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK) log("$what → ${errName(e)}") else log("$what ✓")
     }
 
@@ -368,40 +369,40 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
 
     override fun startMission() {
         val d = d3(); val c = common()
-        if (d == null || c == null) { log("No conectado."); return }
+        if (d == null || c == null) { log(tr("No conectado.")); return }
         telemetry.missionItem = -1 // no arrastrar el índice de un vuelo anterior
-        check("Reset home", d.sendGPSSettingsResetHome())
-        check("Home = punto de despegue", d.sendGPSSettingsHomeType(ARCOMMANDS_ARDRONE3_GPSSETTINGS_HOMETYPE_TYPE_ENUM.ARCOMMANDS_ARDRONE3_GPSSETTINGS_HOMETYPE_TYPE_TAKEOFF))
+        check(tr("Reset home"), d.sendGPSSettingsResetHome())
+        check(tr("Home = punto de despegue"), d.sendGPSSettingsHomeType(ARCOMMANDS_ARDRONE3_GPSSETTINGS_HOMETYPE_TYPE_ENUM.ARCOMMANDS_ARDRONE3_GPSSETTINGS_HOMETYPE_TYPE_TAKEOFF))
         // Como Pix4D: estos límites solo para la Bluegrass (CHIMERA), también detrás del SkyController.
         val drone = if (mode.product == ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2) extensionProduct else mode.product
         if (drone == ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_CHIMERA) {
-            check("Vel. vertical máx 2,5 m/s", d.sendSpeedSettingsMaxVerticalSpeed(2.5f))
-            check("Vel. vertical autónoma 2,5 m/s", d.sendPilotingSettingsSetAutonomousFlightMaxVerticalSpeed(2.5f))
+            check(tr("Vel. vertical máx 2,5 m/s"), d.sendSpeedSettingsMaxVerticalSpeed(2.5f))
+            check(tr("Vel. vertical autónoma 2,5 m/s"), d.sendPilotingSettingsSetAutonomousFlightMaxVerticalSpeed(2.5f))
         }
-        check("App pilotando", c.sendControllerIsPiloting(1.toByte()))
-        check("INICIAR plan", c.sendMavlinkStart(REMOTE_PLAN_NAME, ARCOMMANDS_COMMON_MAVLINK_START_TYPE_ENUM.ARCOMMANDS_COMMON_MAVLINK_START_TYPE_FLIGHTPLAN))
+        check(tr("App pilotando"), c.sendControllerIsPiloting(1.toByte()))
+        check(tr("INICIAR plan"), c.sendMavlinkStart(REMOTE_PLAN_NAME, ARCOMMANDS_COMMON_MAVLINK_START_TYPE_ENUM.ARCOMMANDS_COMMON_MAVLINK_START_TYPE_FLIGHTPLAN))
     }
 
     /** Tras una pausa, Start reanuda el plan. */
-    override fun resumeMission() = check("Reanudar plan", common()?.sendMavlinkStart(REMOTE_PLAN_NAME, ARCOMMANDS_COMMON_MAVLINK_START_TYPE_ENUM.ARCOMMANDS_COMMON_MAVLINK_START_TYPE_FLIGHTPLAN))
-    override fun pauseMission() = check("Pausar plan", common()?.sendMavlinkPause())
-    override fun stopMission() = check("Parar plan", common()?.sendMavlinkStop())
-    override fun returnHome() = check("Volver a casa", d3()?.sendPilotingNavigateHome(1.toByte()))
-    override fun cancelReturnHome() = check("Cancelar vuelta a casa", d3()?.sendPilotingNavigateHome(0.toByte()))
+    override fun resumeMission() = check(tr("Reanudar plan"), common()?.sendMavlinkStart(REMOTE_PLAN_NAME, ARCOMMANDS_COMMON_MAVLINK_START_TYPE_ENUM.ARCOMMANDS_COMMON_MAVLINK_START_TYPE_FLIGHTPLAN))
+    override fun pauseMission() = check(tr("Pausar plan"), common()?.sendMavlinkPause())
+    override fun stopMission() = check(tr("Parar plan"), common()?.sendMavlinkStop())
+    override fun returnHome() = check(tr("Volver a casa"), d3()?.sendPilotingNavigateHome(1.toByte()))
+    override fun cancelReturnHome() = check(tr("Cancelar vuelta a casa"), d3()?.sendPilotingNavigateHome(0.toByte()))
     override fun setReturnHomeOnDisconnect(on: Boolean) =
-        check(if (on) "Enlace perdido → volver a casa" else "Enlace perdido → seguir el plan",
+        check(if (on) tr("Enlace perdido → volver a casa") else tr("Enlace perdido → seguir el plan"),
             common()?.sendFlightPlanSettingsReturnHomeOnDisconnect((if (on) 1 else 0).toByte()))
     /** Calibración radiométrica de la Sequoia (cam_id 0), igual que Pix4Dcapture. */
     override fun cameraCalibration() = radiometricCalibration()
 
     fun radiometricCalibration() {
         val sc = controller?.featureSequoiaCam
-        if (sc == null) { log("La Sequoia no está disponible en este dron/conexión."); return }
+        if (sc == null) { log(tr("La Sequoia no está disponible en este dron/conexión.")); return }
         telemetry.radioCalibResult = -1
-        check("Calibración radiométrica", sc.sendRadiometricCalibStart(0.toByte()))
+        check(tr("Calibración radiométrica"), sc.sendRadiometricCalibStart(0.toByte()))
     }
-    override fun land() = check("Aterrizar", d3()?.sendPilotingLanding())
-    override fun emergency() = check("EMERGENCIA (corte de motores)", d3()?.sendPilotingEmergency())
+    override fun land() = check(tr("Aterrizar"), d3()?.sendPilotingLanding())
+    override fun emergency() = check(tr("EMERGENCIA (corte de motores)"), d3()?.sendPilotingEmergency())
 
     // ---------------------------------------------------------------- vídeo en directo
 
@@ -439,14 +440,14 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     if (!c.hasOutputVideoStream()) Crumbs.write("video: hasOutputVideoStream=false (se intenta igual)")
                     val e = c.startVideoStream()
                     val ok = e == ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK
-                    if (ok || !videoRunning) log(if (ok) "Vídeo en directo activado" else "No se pudo iniciar el vídeo: ${errName(e)}")
+                    if (ok || !videoRunning) log(if (ok) tr("Vídeo en directo activado") else trf("No se pudo iniciar el vídeo: %1\$s", errName(e)))
                     videoRunning = ok || videoRunning
                 } else if (!videoWanted && (force || videoRunning)) {
                     c.stopVideoStream()
-                    if (videoRunning) log("Vídeo en directo desactivado (ahorra enlace)")
+                    if (videoRunning) log(tr("Vídeo en directo desactivado (ahorra enlace)"))
                     videoRunning = false
                 }
-            } catch (t: Throwable) { log("Vídeo: ${t.javaClass.simpleName}: ${t.message}") }
+            } catch (t: Throwable) { log(trf("Vídeo: %1\$s: %2\$s", t.javaClass.simpleName, t.message)) }
         }
     }
 
@@ -483,8 +484,8 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
             main.post {
                 telemetry.connection = when (state) {
                     ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING -> "CONECTADO"
-                    ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STARTING -> "conectando…"
-                    ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPING -> "desconectando…"
+                    ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STARTING -> tr("conectando…")
+                    ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPING -> tr("desconectando…")
                     ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPED -> "desconectado"
                     else -> state.toString()
                 }
@@ -498,12 +499,12 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 if (state == ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING ||
                     state == ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPED) connecting = false
                 if (error != null && error != ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK) {
-                    listener.onLog("Estado ${telemetry.connection} (error ${errName(error)})")
+                    listener.onLog(trf("Estado %1\$s (error %2\$s)", telemetry.connection, errName(error)))
                     if (error.value == -1983 && !mode.usb && mode.product != ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_SKYCONTROLLER_2)
-                        listener.onLog("PISTA: el dron aceptó y luego cortó. Suele pasar si el SkyController está encendido y enlazado: " +
-                            "el dron solo atiende a un mando. Apaga el SkyController o usa el modo «cable USB».")
+                        listener.onLog(tr("PISTA: el dron aceptó y luego cortó. Suele pasar si el SkyController está encendido y enlazado: ") +
+                            tr("el dron solo atiende a un mando. Apaga el SkyController o usa el modo «cable USB»."))
                 }
-                else listener.onLog("Estado: ${telemetry.connection}")
+                else listener.onLog(trf("Estado: %1\$s", telemetry.connection))
                 if (state == ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPED) {
                     releaseController()
                     resetTelemetry()
@@ -529,7 +530,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 }
                 telemetry.extension = "${name ?: product?.name} · ${if (state == ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING) "enlazado" else state?.name}" +
                     if (error != null && error != ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK) " (${errName(error)})" else ""
-                listener.onLog("Dron vía mando: ${telemetry.extension}")
+                listener.onLog(trf("Dron vía mando: %1\$s", telemetry.extension))
                 listener.onTelemetry(telemetry)
             }
         }
@@ -557,7 +558,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 main.post { handle(key, if (isList) null else rows[0], rows) }
             } catch (t: Throwable) {
                 // Nunca dejar escapar una excepción hacia JNI.
-                log("telemetría (${key.name}): ${t.javaClass.simpleName}")
+                log(trf("telemetría (%1\$s): %2\$s", key.name, t.javaClass.simpleName))
             }
         }
     }
@@ -630,7 +631,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     // WiFi directa: el modelo lo decía el menú; si el nombre del dron dice otra cosa, manda el nombre.
                     val byName = when { it.contains("disco", true) -> 2; it.contains("bluegrass", true) -> 1; else -> 0 }
                     if (byName != 0 && byName != t.droneModel) {
-                        if (t.droneModel != 0) log("⚠ El dron se llama «$it»: se trata como ${if (byName == 2) "Disco" else "Bluegrass"} aunque el modo elegido decía otra cosa")
+                        if (t.droneModel != 0) log(trf("⚠ El dron se llama «%1\$s»: se trata como %2\$s aunque el modo elegido decía otra cosa", it, if (byName == 2) "Disco" else "Bluegrass"))
                         t.droneModel = byName
                     }
                 }
@@ -642,7 +643,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE)?.toInt()?.let {
                     t.flyingStateRaw = it
                     t.flyingState = FLYING_STATES.getOrElse(it) { "estado $it" }
-                    log("Vuelo: ${t.flyingState}")
+                    log(trf("Vuelo: %1\$s", t.flyingState))
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALTITUDECHANGED ->
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALTITUDECHANGED_ALTITUDE)?.let { t.altitude = it.toDouble() }
@@ -666,48 +667,48 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_NAVIGATEHOMESTATECHANGED_STATE)?.toInt()?.let {
                     t.navigateHome = NAV_HOME.getOrElse(it) { "estado $it" }
                     num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_NAVIGATEHOMESTATECHANGED_REASON)?.toInt()?.let { r -> t.navHomeReason = r }
-                    log("Vuelta a casa: ${t.navigateHome}" + if (t.navHomeReason >= 0) " (${NAV_HOME_REASON.getOrElse(t.navHomeReason) { "motivo ${t.navHomeReason}" }})" else "")
+                    log(trf("Vuelta a casa: %1\$s", tr(t.navigateHome)) + if (t.navHomeReason >= 0) " (${NAV_HOME_REASON.getOrElse(t.navHomeReason) { "motivo ${t.navHomeReason}" }})" else "")
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES -> {
                 // Lista de accesorios que ve el dron. Tipo: 0 = Sequoia, 1 = FLIR (enum ARSDK).
                 val txt = all.joinToString(", ") { e ->
                     val type = e[ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES_ACCESSORY_TYPE]
-                    val tn = when (type?.toString()?.toIntOrNull() ?: (type as? Enum<*>)?.ordinal) { 0 -> "Sequoia"; 1 -> "FLIR"; else -> "accesorio ${type}" }
+                    val tn = when (type?.toString()?.toIntOrNull() ?: (type as? Enum<*>)?.ordinal) { 0 -> tr("Sequoia"); 1 -> "FLIR"; else -> "accesorio ${type}" }
                     val fw = e[ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES_SWVERSION]
-                    tn + (if (fw != null && fw.toString().isNotBlank()) " · fw $fw" else "")
+                    tn + (if (fw != null && fw.toString().isNotBlank()) trf(" · fw %1\$s", fw) else "")
                 }
-                if (txt != t.accessories) log("Accesorios que ve el dron: ${txt.ifEmpty { "ninguno" }}")
+                if (txt != t.accessories) log(trf("Accesorios que ve el dron: %1\$s", txt.ifEmpty { "ninguno" }))
                 t.accessories = txt
                 if (txt.contains("Sequoia")) t.sequoiaSeen = true
             }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBSTATUS ->
                 num(s, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBSTATUS_VALUE)?.toInt()?.let {
-                    if (!t.sequoiaSeen) log("El dron maneja la Sequoia (responde a su estado de calibración)")
+                    if (!t.sequoiaSeen) log(tr("El dron maneja la Sequoia (responde a su estado de calibración)"))
                     t.sequoiaSeen = true
-                    if (it != t.radioCalibStatus) log("Calibración Sequoia: " + arrayOf("disponible", "no disponible", "EN CURSO…").getOrElse(it) { "estado $it" })
+                    if (it != t.radioCalibStatus) log(tr("Calibración Sequoia: ") + arrayOf("disponible", tr("no disponible"), tr("EN CURSO…")).getOrElse(it) { "estado $it" })
                     t.radioCalibStatus = it
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT -> {
                 for (e in all) num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT_VALUE)?.toInt()?.let {
                     t.radioCalibResult = it
-                    log(if (it == 0) "✔ Calibración radiométrica correcta" else "✘ Calibración radiométrica FALLIDA")
+                    log(if (it == 0) tr("✔ Calibración radiométrica correcta") else tr("✘ Calibración radiométrica FALLIDA"))
                 }
             }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALERTSTATECHANGED ->
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALERTSTATECHANGED_STATE)?.toInt()?.let {
-                    if (it != t.alert) log("Alerta del dron: ${ALERTS.getOrElse(it) { "código $it" }}")
+                    if (it != t.alert) log(trf("Alerta del dron: %1\$s", ALERTS.getOrElse(it) { "código $it" }))
                     t.alert = it
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_WINDSTATECHANGED ->
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_WINDSTATECHANGED_STATE)?.toInt()?.let {
-                    if (it != t.wind && it > 0) log(if (it == 1) "Viento fuerte" else "Viento DEMASIADO fuerte")
+                    if (it != t.wind && it > 0) log(if (it == 1) tr("Viento fuerte") else tr("Viento DEMASIADO fuerte"))
                     t.wind = it
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_RETURNHOMEBATTERYCAPACITY ->
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_RETURNHOMEBATTERYCAPACITY_STATUS)?.toInt()?.let { t.rthBattery = it }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_SETTINGSSTATE_MOTORERRORSTATECHANGED ->
                 num(s, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_SETTINGSSTATE_MOTORERRORSTATECHANGED_MOTORERROR)?.toInt()?.let {
-                    if (it != t.motorError && it != 0) log("ERROR DE MOTOR: ${MOTOR_ERRORS.getOrElse(it) { "código $it" }}")
+                    if (it != t.motorError && it != 0) log(trf("ERROR DE MOTOR: %1\$s", MOTOR_ERRORS.getOrElse(it) { "código $it" }))
                     t.motorError = it
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSETTINGSSTATE_RETURNHOMEONDISCONNECTCHANGED -> {
@@ -726,12 +727,12 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     t.planStateRaw = it
                     t.planState = MAV_STATES.getOrElse(it) { "estado $it" }
                     t.planPlaying = it == 0
-                    log("Plan: ${t.planState} (${s?.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MAVLINKFILEPLAYINGSTATECHANGED_FILEPATH) ?: ""})")
+                    log(trf("Plan: %1\$s (%2\$s)", t.planState, s?.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MAVLINKFILEPLAYINGSTATECHANGED_FILEPATH) ?: ""))
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MAVLINKPLAYERRORSTATECHANGED ->
                 num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MAVLINKPLAYERRORSTATECHANGED_ERROR)?.toInt()?.let {
                     t.planError = if (it == 0) "" else MAV_ERRORS.getOrElse(it) { "error $it" }
-                    if (it != 0) log("¡El dron rechaza el plan: ${t.planError}!")
+                    if (it != 0) log(trf("¡El dron rechaza el plan: %1\$s!", t.planError))
                 }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MISSIONITEMEXECUTED ->
                 num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_MAVLINKSTATE_MISSIONITEMEXECUTED_IDX)?.let { t.missionItem = it.toInt(); missionItemEvents++ }
@@ -744,7 +745,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 for (e in entries) {
                     val comp = num(e, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_COMPONENT)?.toInt() ?: continue
                     val st = num(e, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_STATE)?.toInt() ?: continue
-                    t.components[COMPONENTS.getOrElse(comp) { "Componente $comp" }] = st == 1
+                    t.components[COMPONENTS.getOrElse(comp) { trf("Componente %1\$s", comp) }] = st == 1
                 }
             }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE ->

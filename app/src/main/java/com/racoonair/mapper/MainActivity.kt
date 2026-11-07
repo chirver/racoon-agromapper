@@ -68,6 +68,7 @@ class MainActivity : Activity(), DroneLink.Listener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        I18n.init(applicationContext)
         setTheme(android.R.style.Theme_Material_NoActionBar)
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -80,14 +81,14 @@ class MainActivity : Activity(), DroneLink.Listener {
         link.listener = this
         setContentView(buildUi())
         if (existing == null) {
-            if (!DroneLink.loadLibs()) onLog("ERROR: no se pudieron cargar las librerías ARSDK.")
-            else onLog("ARSDK 3.14 cargado. Conecta el móvil a la WiFi del dron y pulsa Conectar.")
-        } else onLog("Pantalla recreada; el enlace sigue activo.")
+            if (!DroneLink.loadLibs()) onLog(tr("ERROR: no se pudieron cargar las librerías ARSDK."))
+            else onLog(tr("ARSDK 3.14 cargado. Conecta el móvil a la WiFi del dron y pulsa Conectar."))
+        } else onLog(tr("Pantalla recreada; el enlace sigue activo."))
         plan?.let { showPlan(it) }
         flightMap.track = Session.track.toList()
         Crumbs.takeLastCrash()?.let { crash ->
             Session.lastCrash = crash
-            onLog("⚠ La app se cerró por un fallo la última vez. Pulsa Diagnóstico → Compartir y envíalo.")
+            onLog(tr("⚠ La app se cerró por un fallo la última vez. Pulsa Diagnóstico → Compartir y envíalo."))
         }
         setViewMode(Session.showVideo && link.supportsVideo)
         onTelemetry(link.telemetry)
@@ -162,18 +163,18 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     private fun updateRthBatBtn() {
         val l = rthBatteryLevel()
-        rthBatBtn.text = if (l == 0) "Vuelta a casa por batería: DESACTIVADA" else "Vuelta a casa por batería: $l %"
+        rthBatBtn.text = if (l == 0) tr("Vuelta a casa por batería: DESACTIVADA") else trf("Vuelta a casa por batería: %1\$s %%", l)
         rthBatBtn.background = GradientDrawable().apply { setColor(if (l == 0) C_AMBER else C_GREY); cornerRadius = dp(8).toFloat() }
     }
 
     private fun pickRthBattery() {
         val levels = intArrayOf(0, 20, 25, 30, 35, 40)
-        val names = levels.map { if (it == 0) "Desactivada" else "$it %" + if (it == 30) " (recomendado)" else "" }.toTypedArray()
-        AlertDialog.Builder(this).setTitle("Vuelta a casa automática por batería")
+        val names = levels.map { if (it == 0) tr("Desactivada") else "$it %" + if (it == 30) tr(" (recomendado)") else "" }.toTypedArray()
+        AlertDialog.Builder(this).setTitle(tr("Vuelta a casa automática por batería"))
             .setSingleChoiceItems(names, levels.indexOf(rthBatteryLevel()).coerceAtLeast(0)) { d, i ->
                 prefs.edit().putInt("rth_bateria", levels[i]).apply()
-                updateRthBatBtn(); onLog("Vuelta a casa por batería: ${names[i]}"); d.dismiss()
-            }.setNegativeButton("Cerrar", null).show()
+                updateRthBatBtn(); onLog(trf("Vuelta a casa por batería: %1\$s", names[i])); d.dismiss()
+            }.setNegativeButton(tr("Cerrar"), null).show()
     }
 
     private fun canShowDialog() = !isFinishing && !isDestroyed
@@ -193,15 +194,15 @@ class MainActivity : Activity(), DroneLink.Listener {
             1 -> {
                 if (t.navigateHome == "en curso") {
                     Session.autoRth = 2
-                    onLog("Vuelta a casa por batería confirmada por el dron ✓")
+                    onLog(tr("Vuelta a casa por batería confirmada por el dron ✓"))
                     showAutoRthDialog(t, level)
                 } else if (now - Session.autoRthSentAt >= 5000 && link.isConnected && t.droneLinked) {
                     Session.autoRthTries++
                     Session.autoRthSentAt = now
-                    onLog("⛔ El dron no ha aceptado la vuelta a casa (${t.navigateHome}); reintento ${Session.autoRthTries}")
+                    onLog(trf("⛔ El dron no ha aceptado la vuelta a casa (%1\$s); reintento %2\$s", tr(t.navigateHome), Session.autoRthTries))
                     alarm(strong = true)
                     link.returnHome()
-                    if (Session.autoRthTries == 3) onLog("⛔ VUELTA A CASA NO ACEPTADA: trae el dron a mano con el SkyController")
+                    if (Session.autoRthTries == 3) onLog(tr("⛔ VUELTA A CASA NO ACEPTADA: trae el dron a mano con el SkyController"))
                 }
                 return
             }
@@ -212,9 +213,9 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
         if (Session.belowSince == 0L) { Session.belowSince = now; return }
         if (now - Session.belowSince < 10_000) return
-        if (t.navigateHome == "en curso") { Session.autoRth = 2; onLog("Batería ${t.battery} %: el dron ya vuelve a casa"); return }
+        if (t.navigateHome == "en curso") { Session.autoRth = 2; onLog(trf("Batería %1\$s %%: el dron ya vuelve a casa", t.battery)); return }
         Session.autoRth = 1; Session.autoRthSentAt = now; Session.autoRthTries = 0
-        onLog("⛔ Batería ${t.battery} % (umbral $level %): VUELTA A CASA AUTOMÁTICA")
+        onLog(trf("⛔ Batería %1\$s %% (umbral %2\$s %%): VUELTA A CASA AUTOMÁTICA", t.battery, level))
         link.returnHome()
         alarm(strong = true)
     }
@@ -223,13 +224,13 @@ class MainActivity : Activity(), DroneLink.Listener {
         if (!canShowDialog()) return
         rthDialog?.dismiss()
         rthDialog = AlertDialog.Builder(this)
-            .setTitle("Volviendo a casa · batería ${t.battery} %")
-            .setMessage("La batería ha bajado del $level %, así que el dron ha abandonado el plan y vuelve a casa.\n\n" +
-                "El progreso queda guardado: tras cambiar la batería podrás REANUDAR la misión donde se quedó.\n\n" +
-                "Para pilotar a mano: pulsa «Cancelar vuelta» (queda en estacionario) y usa los sticks del SkyController.")
-            .setNegativeButton("Cancelar vuelta") { _, _ ->
+            .setTitle(trf("Volviendo a casa · batería %1\$s %%", t.battery))
+            .setMessage(trf("La batería ha bajado del %1\$s %%, así que el dron ha abandonado el plan y vuelve a casa.\n\n", level) +
+                tr("El progreso queda guardado: tras cambiar la batería podrás REANUDAR la misión donde se quedó.\n\n") +
+                tr("Para pilotar a mano: pulsa «Cancelar vuelta» (queda en estacionario) y usa los sticks del SkyController."))
+            .setNegativeButton(tr("Cancelar vuelta")) { _, _ ->
                 Session.autoRth = 3
-                link.cancelReturnHome(); onLog("Vuelta automática cancelada por el piloto (el dron queda en estacionario)")
+                link.cancelReturnHome(); onLog(tr("Vuelta automática cancelada por el piloto (el dron queda en estacionario)"))
             }
             .setPositiveButton("OK", null).show()
     }
@@ -264,26 +265,26 @@ class MainActivity : Activity(), DroneLink.Listener {
         val home = plan?.homePoint?.let { LatLon(it.lat, it.lon) } ?: Session.track.firstOrNull()
         val dist = if (d != null && home != null) "%.0f m".format(GridPlanner.distance(d, home)) else "—"
         osd.text = buildString {
-            append("ALT ${fmt(t.altitude, 0, "m")}  VEL ${fmt(t.speed, 1, "m/s")}  BAT ${if (t.battery < 0) "—" else "${t.battery}%"}")
-            append("\nCASA $dist  ·  GPS ${if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX"}  ·  ${t.flyingState}")
+            append(trf("ALT %1\$s  VEL %2\$s  BAT %3\$s", fmt(t.altitude, 0, "m"), fmt(t.speed, 1, "m/s"), if (t.battery < 0) "—" else "${t.battery}%"))
+            append(trf("\nCASA %1\$s  ·  GPS %2\$s  ·  %3\$s", dist, if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX", t.flyingState))
         }
         val fresh = System.currentTimeMillis() - videoView.lastFrameAt < 2000
         videoWait.visibility = if (fresh) View.GONE else View.VISIBLE
-        videoWait.text = if (!link.isConnected) "Conecta el dron para ver el vídeo" else "Esperando vídeo…"
+        videoWait.text = if (!link.isConnected) tr("Conecta el dron para ver el vídeo") else tr("Esperando vídeo…")
     }
     private var lastAlertsKey = ""
 
     private fun toggleRthOnDisconnect() {
         val t = link.telemetry
         if (!link.isConnected) return
-        if (t.rthOnDisconnectReadOnly) { onLog("El dron no permite cambiar este ajuste."); return }
+        if (t.rthOnDisconnectReadOnly) { onLog(tr("El dron no permite cambiar este ajuste.")); return }
         val turnOn = t.rthOnDisconnect != 1
         AlertDialog.Builder(this)
-            .setTitle("Si se pierde el enlace durante el plan")
-            .setMessage(if (turnOn) "El dron abandonará el plan y VOLVERÁ A CASA si pierde el enlace con el mando."
-                        else "El dron SEGUIRÁ el plan aunque pierda el enlace (y al terminar aterrizará en la casa del plan).")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Aplicar") { _, _ -> link.setReturnHomeOnDisconnect(turnOn) }
+            .setTitle(tr("Si se pierde el enlace durante el plan"))
+            .setMessage(if (turnOn) tr("El dron abandonará el plan y VOLVERÁ A CASA si pierde el enlace con el mando.")
+                        else tr("El dron SEGUIRÁ el plan aunque pierda el enlace (y al terminar aterrizará en la casa del plan)."))
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Aplicar")) { _, _ -> link.setReturnHomeOnDisconnect(turnOn) }
             .show()
     }
 
@@ -307,12 +308,12 @@ class MainActivity : Activity(), DroneLink.Listener {
         val rem = missionRemainingMin(t)
         val bat = FlightRecorder.minutesTo(20, t.battery)
         if (airborne && rem != null && bat != null && bat < rem + 2)
-            alerts.add("⚠ La batería puede no llegar al final del plan (≈${"%.0f".format(bat)} min de batería, ≈${"%.0f".format(rem)} min de plan)")
-        if (airborne && t.battery in 0..20) alerts.add(0, "⛔ Batería ${t.battery} %: vuelve a casa")
-        else if (airborne && t.battery in 21..30) alerts.add("⚠ Batería ${t.battery} %")
-        if (!link.isConnected && FlightRecorder.recording) alerts.add(0, "⛔ ENLACE PERDIDO en vuelo")
-        if (Session.autoRth == 1) alerts.add(0, "⛔ VUELTA A CASA POR BATERÍA: el dron aún no la ha aceptado")
-        else if (Session.autoRth == 2 && t.navigateHome == "en curso") alerts.add(0, "⛔ VOLVIENDO A CASA por batería")
+            alerts.add(trf("⚠ La batería puede no llegar al final del plan (≈%1\$s min de batería, ≈%2\$s min de plan)", "%.0f".format(bat), "%.0f".format(rem)))
+        if (airborne && t.battery in 0..20) alerts.add(0, trf("⛔ Batería %1\$s %%: vuelve a casa", t.battery))
+        else if (airborne && t.battery in 21..30) alerts.add(trf("⚠ Batería %1\$s %%", t.battery))
+        if (!link.isConnected && FlightRecorder.recording) alerts.add(0, tr("⛔ ENLACE PERDIDO en vuelo"))
+        if (Session.autoRth == 1) alerts.add(0, tr("⛔ VUELTA A CASA POR BATERÍA: el dron aún no la ha aceptado"))
+        else if (Session.autoRth == 2 && t.navigateHome == "en curso") alerts.add(0, tr("⛔ VOLVIENDO A CASA por batería"))
 
         alertBanner.visibility = if (alerts.isEmpty()) View.GONE else View.VISIBLE
         if (alerts.isNotEmpty()) {
@@ -329,12 +330,12 @@ class MainActivity : Activity(), DroneLink.Listener {
         if (t.battery in 0..20 && Session.batteryAlarmLevel < 2) {
             Session.batteryAlarmLevel = 2; alarm(strong = true)
             if (canShowDialog() && t.navigateHome != "en curso" && (rthBatteryLevel() == 0 || Session.autoRth == 3)) AlertDialog.Builder(this)
-                .setTitle("Batería ${t.battery} %")
-                .setMessage("Conviene volver ya. ¿Ordenar VOLVER A CASA?")
-                .setNegativeButton("Seguir", null)
-                .setPositiveButton("VOLVER A CASA") { _, _ -> link.returnHome() }.show()
+                .setTitle(trf("Batería %1\$s %%", t.battery))
+                .setMessage(tr("Conviene volver ya. ¿Ordenar VOLVER A CASA?"))
+                .setNegativeButton(tr("Seguir"), null)
+                .setPositiveButton(tr("VOLVER A CASA")) { _, _ -> link.returnHome() }.show()
         } else if (t.battery in 21..30 && Session.batteryAlarmLevel < 1) {
-            Session.batteryAlarmLevel = 1; alarm(strong = false); onLog("Batería al ${t.battery} %")
+            Session.batteryAlarmLevel = 1; alarm(strong = false); onLog(trf("Batería al %1\$s %%", t.battery))
         }
     }
 
@@ -354,22 +355,22 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     /** KML con el plan cargado y el rastro del último vuelo. */
     private fun exportFlightKml() {
-        val d = KmlExport.Doc("Racoon AgroMapper · ${planName.ifEmpty { "vuelo" }}")
+        val d = KmlExport.Doc(trf("Racoon AgroMapper · %1\$s", planName.ifEmpty { "vuelo" }))
         plan?.let { KmlExport.addPlan(d, it, planName) }
         val f = FlightRecorder.lastFlight(this)
         var name = planName.ifEmpty { "plan" }
-        if (f != null) { d.line("Vuelo ${f.name.removeSuffix(".csv")}", KmlExport.trackFromCsv(f), "vuelo"); name = "vuelo ${f.name.removeSuffix(".csv")}" }
-        if (plan == null && f == null) { Toast.makeText(this, "No hay plan ni vuelos que exportar", Toast.LENGTH_SHORT).show(); return }
+        if (f != null) { d.line(trf("Vuelo %1\$s", f.name.removeSuffix(".csv")), KmlExport.trackFromCsv(f), "vuelo"); name = "vuelo ${f.name.removeSuffix(".csv")}" }
+        if (plan == null && f == null) { Toast.makeText(this, tr("No hay plan ni vuelos que exportar"), Toast.LENGTH_SHORT).show(); return }
         KmlExport.saveAndShare(this, name, d.build())
     }
 
     private fun shareLastFlight() {
         val f = FlightRecorder.lastFlight(this)
-        if (f == null) { Toast.makeText(this, "Aún no hay vuelos registrados", Toast.LENGTH_SHORT).show(); return }
-        val text = try { "Vuelo ${f.name}\n" + FlightRecorder.summarize(f) + "\n\n== CSV ==\n" + f.readText() } catch (e: Exception) { "Error: ${e.message}" }
-        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-            .putExtra(Intent.EXTRA_SUBJECT, "Racoon AgroMapper vuelo ${f.name}")
-            .putExtra(Intent.EXTRA_TEXT, if (text.length > 400_000) text.take(400_000) else text), "Enviar log de vuelo"))
+        if (f == null) { Toast.makeText(this, tr("Aún no hay vuelos registrados"), Toast.LENGTH_SHORT).show(); return }
+        val text = try { trf("Vuelo %1\$s\n", f.name) + FlightRecorder.summarize(f) + tr("\n\n== CSV ==\n") + f.readText() } catch (e: Exception) { trf("Error: %1\$s", e.message) }
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(tr("text/plain"))
+            .putExtra(Intent.EXTRA_SUBJECT, trf("Racoon AgroMapper vuelo %1\$s", f.name))
+            .putExtra(Intent.EXTRA_TEXT, if (text.length > 400_000) text.take(400_000) else text), tr("Enviar log de vuelo")))
     }
     private lateinit var flightMap: MapView
     private lateinit var flightInfo: TextView
@@ -377,7 +378,7 @@ class MainActivity : Activity(), DroneLink.Listener {
     private var follow = true
 
     private fun updateFollowBtn() {
-        followBtn.text = if (follow) "Seguir dron: SÍ" else "Seguir dron: NO"
+        followBtn.text = if (follow) tr("Seguir dron: SÍ") else tr("Seguir dron: NO")
     }
 
     private fun dronePos(t: DroneLink.Telemetry): LatLon? =
@@ -422,18 +423,18 @@ class MainActivity : Activity(), DroneLink.Listener {
         val doneWp = if (t.missionItem >= 0) wps.count { it.index <= t.missionItem } else 0
         flightMap.routeDone = doneWp
         flightInfo.text = buildString {
-            append(if (wps.isNotEmpty()) "WP $doneWp/${wps.size}" else "Sin plan")
+            append(if (wps.isNotEmpty()) trf("WP %1\$s/%2\$s", doneWp, wps.size) else tr("Sin plan"))
             if (!t.altitude.isNaN()) append("  ·  ${"%.0f".format(t.altitude)} m")
             if (!t.speed.isNaN()) append("  ·  ${"%.1f".format(t.speed)} m/s")
-            if (t.battery >= 0) append("  ·  bat ${t.battery} %")
+            if (t.battery >= 0) append(trf("  ·  bat %1\$s %%", t.battery))
             FlightRecorder.drainPerMin()?.let { r ->
-                append("\nBatería: ≈${"%.0f".format(FlightRecorder.minutesTo(20, t.battery) ?: 0.0)} min hasta 20 % (gasta ${"%.1f".format(r)} %/min)")
+                append(trf("\nBatería: ≈%1\$s min hasta 20 %% (gasta %2\$s %%/min)", "%.0f".format(FlightRecorder.minutesTo(20, t.battery) ?: 0.0), "%.1f".format(r)))
             }
-            missionRemainingMin(t)?.let { append("\nPlan restante ≈ ${"%.0f".format(it)} min") }
-            if (FlightRecorder.recording) append("  ·  en el aire ${"%.1f".format(FlightRecorder.elapsedS / 60)} min")
+            missionRemainingMin(t)?.let { append(trf("\nPlan restante ≈ %1\$s min", "%.0f".format(it))) }
+            if (FlightRecorder.recording) append(trf("  ·  en el aire %1\$s min", "%.1f".format(FlightRecorder.elapsedS / 60)))
             val home = p?.homePoint
-            if (d != null && home != null) append("\nA casa: ${"%.0f".format(FlightPlan.haversine(d.lat, d.lon, home.lat, home.lon))} m")
-            if (d == null) append("\nPosición del dron: esperando GPS…")
+            if (d != null && home != null) append(trf("\nA casa: %1\$s m", "%.0f".format(FlightPlan.haversine(d.lat, d.lon, home.lat, home.lon))))
+            if (d == null) append(tr("\nPosición del dron: esperando GPS…"))
         }
     }
 
@@ -441,23 +442,23 @@ class MainActivity : Activity(), DroneLink.Listener {
         super.onResume()
         if (Session.planVersion != shownPlanVersion) {
             shownPlanVersion = Session.planVersion
-            plan?.let { showPlan(it); onLog("Plan listo: $planName (${it.items.size} ítems, estimado ${"%.1f".format(Session.plannerEstimateS / 60)} min). Pulsa «Subir al dron».") }
+            plan?.let { showPlan(it); onLog(trf("Plan listo: %1\$s (%2\$s ítems, estimado %3\$s min). Pulsa «Subir al dron».", planName, it.items.size, "%.1f".format(Session.plannerEstimateS / 60))) }
             refreshButtons()
         }
     }
 
     private fun pickSavedPlan() {
         val files = PlanStore.plans(this)
-        if (files.isEmpty()) { Toast.makeText(this, "Aún no hay planes guardados: usa «Planificar en el mapa»", Toast.LENGTH_LONG).show(); return }
-        AlertDialog.Builder(this).setTitle("Planes guardados")
+        if (files.isEmpty()) { Toast.makeText(this, tr("Aún no hay planes guardados: usa «Planificar en el mapa»"), Toast.LENGTH_LONG).show(); return }
+        AlertDialog.Builder(this).setTitle(tr("Planes guardados"))
             .setItems(files.map { it.name.removeSuffix(".mavlink") }.toTypedArray()) { _, i ->
                 try {
                     val p = FlightPlan.parse(files[i].readText())
                     Session.setPlan(p, files[i].name)
                     shownPlanVersion = Session.planVersion
-                    showPlan(p); onLog("Plan cargado: ${files[i].name}")
+                    showPlan(p); onLog(trf("Plan cargado: %1\$s", files[i].name))
                     refreshButtons()
-                } catch (e: Exception) { onLog("Plan no válido: ${e.message}") }
+                } catch (e: Exception) { onLog(trf("Plan no válido: %1\$s", e.message)) }
             }.show()
     }
 
@@ -544,14 +545,14 @@ class MainActivity : Activity(), DroneLink.Listener {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(120)).apply { bottomMargin = dp(10) })
         val titles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         titles.addView(TextView(this).apply {
-            text = "Racoon AgroMapper"; setTextColor(C_TEXT); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
+            text = tr("Racoon AgroMapper"); setTextColor(C_TEXT); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
         })
         titles.addView(TextView(this).apply {
             val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Throwable) { "?" }
-            text = "for Parrot " + Flavor.TITLE + " · v$ver · app no oficial"; setTextColor(C_DIM); textSize = 12f
+            text = tr("for Parrot ") + Flavor.TITLE + trf(" · v%1\$s · app no oficial", ver); setTextColor(C_DIM); textSize = 12f
         })
         titles.addView(TextView(this).apply {
-            text = "Hecho a cuatro manos con Claude"; setTextColor(0xFFD97757.toInt()); textSize = 11f
+            text = tr("Hecho a cuatro manos con Claude"); setTextColor(0xFFD97757.toInt()); textSize = 11f
             setTypeface(typeface, Typeface.ITALIC)
         })
         header.addView(titles)
@@ -563,7 +564,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         root.addView(alertBanner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
 
         // Conexión
-        val conn = card("Conexión")
+        val conn = card(tr("Conexión"))
         modeSpinner = Spinner(this)
         modeSpinner.adapter = object : ArrayAdapter<ConnectChoice>(this, android.R.layout.simple_spinner_item, choices) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
@@ -573,48 +574,48 @@ class MainActivity : Activity(), DroneLink.Listener {
         choices.indexOfFirst { it.platform == link.platform }.takeIf { it >= 0 }?.let { modeSpinner.setSelection(it) }
         connText = label(14f)
         conn.addView(connText)
-        connectBtn = button("Conectar", C_BLUE) { onConnectClicked() }
+        connectBtn = button(tr("Conectar"), C_BLUE) { onConnectClicked() }
         conn.addView(row(connectBtn))
         root.addView(conn); connCard = conn
 
         // Telemetría
-        val tel = card("Telemetría")
+        val tel = card(tr("Telemetría"))
         telemText = label(14f, mono = true)
         tel.addView(telemText)
         root.addView(tel); telCard = tel
 
         // Pre-vuelo
-        val chk = card("Comprobaciones del dron para el plan")
+        val chk = card(tr("Comprobaciones del dron para el plan"))
         checksText = label(14f, mono = true)
         chk.addView(checksText)
         root.addView(chk); chkCard = chk
 
         // Plan
-        val pl = card("Plan de vuelo")
+        val pl = card(tr("Plan de vuelo"))
         planText = label(13f, mono = true)
-        planText.text = "Sin plan cargado."
+        planText.text = tr("Sin plan cargado.")
         pl.addView(planText)
-        uploadBtn = button("Subir al dron", C_BLUE) { onUploadClicked() }
-        pl.addView(row(button("🗺  PLANIFICAR EN EL MAPA", C_GREEN) {
+        uploadBtn = button(tr("Subir al dron"), C_BLUE) { onUploadClicked() }
+        pl.addView(row(button(tr("🗺  PLANIFICAR EN EL MAPA"), C_GREEN) {
             startActivity(Intent(this, PlannerActivity::class.java))
         }))
-        pl.addView(row(button("Planes guardados", C_GREY) { pickSavedPlan() }, button("Cargar fichero", C_GREY) { pickPlan() }))
+        pl.addView(row(button(tr("Planes guardados"), C_GREY) { pickSavedPlan() }, button(tr("Cargar fichero"), C_GREY) { pickPlan() }))
         pl.addView(row(uploadBtn))
-        pl.addView(row(button("Calibración de cámara (Sequoia / térmica)", C_GREY) { onCalibrateClicked() }))
-        pl.addView(row(button("📷  Enviar el plan a la Sequoia (por WiFi)", C_GREY) { onSequoiaClicked() }))
-        pl.addView(row(button("🌤  Meteo y Kp: ¿se puede volar?", C_BLUE) { onWeatherClicked() }))
+        pl.addView(row(button(tr("Calibración de cámara (Sequoia / térmica)"), C_GREY) { onCalibrateClicked() }))
+        pl.addView(row(button(tr("📷  Enviar el plan a la Sequoia (por WiFi)"), C_GREY) { onSequoiaClicked() }))
+        pl.addView(row(button(tr("🌤  Meteo y Kp: ¿se puede volar?"), C_BLUE) { onWeatherClicked() }))
         root.addView(pl); planCard = pl
 
         // Mapa en vuelo
-        val mc = card("Mapa en vuelo")
+        val mc = card(tr("Mapa en vuelo"))
         // Datos de vuelo encima del mapa (como el OSD del vídeo): el hueco entero es para el mapa.
         flightInfo = label(12f, mono = true).apply {
             setTextColor(Color.WHITE); setShadowLayer(4f, 1f, 1f, Color.BLACK)
             setPadding(dp(8), dp(4), dp(8), dp(4)); setBackgroundColor(0x77000000)
         }
         // Selector Mapa | Vídeo: comparten el mismo hueco para no saturar la pantalla.
-        mapTab = button("🗺 Mapa", C_BLUE) { setViewMode(video = false) }
-        videoTab = button("🎥 Vídeo", C_GREY) { setViewMode(video = true) }
+        mapTab = button(tr("🗺 Mapa"), C_BLUE) { setViewMode(video = false) }
+        videoTab = button(tr("🎥 Vídeo"), C_GREY) { setViewMode(video = true) }
         tabsRow = row(mapTab, videoTab)
         mc.addView(tabsRow)
         viewHolder = FrameLayout(this)
@@ -624,7 +625,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         videoBox = FrameLayout(this).apply { setBackgroundColor(Color.BLACK); visibility = View.GONE }
         videoView = VideoView(this)
         videoBox.addView(videoView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-        videoWait = TextView(this).apply { setTextColor(C_DIM); textSize = 14f; gravity = Gravity.CENTER; text = "Esperando vídeo…" }
+        videoWait = TextView(this).apply { setTextColor(C_DIM); textSize = 14f; gravity = Gravity.CENTER; text = tr("Esperando vídeo…") }
         videoBox.addView(videoWait, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         osd = TextView(this).apply {
             setTextColor(Color.WHITE); textSize = 13f; typeface = Typeface.MONOSPACE
@@ -637,46 +638,47 @@ class MainActivity : Activity(), DroneLink.Listener {
         root.addView(mc); mapCard = mc
 
         // Opciones del mapa: aparte, para no quitarle sitio (en apaisado van en la columna derecha, bajando).
-        val mt = card("Mapa: opciones y registros")
-        followBtn = button("Seguir dron: SÍ", C_BLUE) { follow = !follow; updateFollowBtn(); if (follow) centerOnDrone() }
-        mt.addView(row(followBtn, button("Ver plan", C_GREY) { follow = false; updateFollowBtn(); fitFlightMap() }))
-        mt.addView(row(button("Borrar rastro", C_GREY) { Session.track.clear(); flightMap.track = emptyList() },
-            button("Compartir log", C_GREY) { shareLastFlight() }))
-        mt.addView(row(button("Exportar KML", C_GREY) { exportFlightKml() }))
+        val mt = card(tr("Mapa: opciones y registros"))
+        followBtn = button(tr("Seguir dron: SÍ"), C_BLUE) { follow = !follow; updateFollowBtn(); if (follow) centerOnDrone() }
+        mt.addView(row(followBtn, button(tr("Ver plan"), C_GREY) { follow = false; updateFollowBtn(); fitFlightMap() }))
+        mt.addView(row(button(tr("Borrar rastro"), C_GREY) { Session.track.clear(); flightMap.track = emptyList() },
+            button(tr("Compartir log"), C_GREY) { shareLastFlight() }))
+        mt.addView(row(button(tr("Exportar KML"), C_GREY) { exportFlightKml() }))
         root.addView(mt); mapToolsCard = mt
 
         // Misión
-        val ms = card("Misión")
-        startBtn = button("▶  INICIAR MISIÓN", C_GREEN) { onStartClicked() }
+        val ms = card(tr("Misión"))
+        startBtn = button(tr("▶  INICIAR MISIÓN"), C_GREEN) { onStartClicked() }
         ms.addView(row(startBtn))
-        resumeBtn = button("↻ Reanudar misión", C_BLUE) { onResumeMissionClicked() }
+        resumeBtn = button(tr("↻ Reanudar misión"), C_BLUE) { onResumeMissionClicked() }
         ms.addView(row(resumeBtn))
-        pauseBtn = button("Pausar", C_AMBER) { onPauseClicked() }
-        ms.addView(row(pauseBtn, button("Parar (estacionario)", C_AMBER) { if (!justStarted()) link.stopMission() }))
+        pauseBtn = button(tr("Pausar"), C_AMBER) { onPauseClicked() }
+        ms.addView(row(pauseBtn, button(tr("Parar (estacionario)"), C_AMBER) { if (!justStarted()) link.stopMission() }))
         ms.addView(row(
-            button("Volver a casa", C_BLUE) { link.returnHome() },
-            button("Aterrizar", C_BLUE) { link.land() }
+            button(tr("Volver a casa"), C_BLUE) { link.returnHome() },
+            button(tr("Aterrizar"), C_BLUE) { link.land() }
         ))
-        rthDiscBtn = button("Si se pierde el enlace: —", C_GREY) { toggleRthOnDisconnect() }
+        rthDiscBtn = button(tr("Si se pierde el enlace: —"), C_GREY) { toggleRthOnDisconnect() }
         ms.addView(row(rthDiscBtn))
         rthBatBtn = button("", C_GREY) { pickRthBattery() }
         updateRthBatBtn()
         ms.addView(row(rthBatBtn))
-        val emergency = button("EMERGENCIA · mantener pulsado", C_RED) {
-            Toast.makeText(this, "Mantén pulsado para CORTAR MOTORES (el dron cae)", Toast.LENGTH_SHORT).show()
+        val emergency = button(tr("EMERGENCIA · mantener pulsado"), C_RED) {
+            Toast.makeText(this, tr("Mantén pulsado para CORTAR MOTORES (el dron cae)"), Toast.LENGTH_SHORT).show()
         }
         emergency.setOnLongClickListener { confirmEmergency(); true }
         ms.addView(row(emergency))
         ms.addView(TextView(this).apply {
-            text = "Con WiFi directa no hay mandos: el control manual de respaldo es el SkyController. " +
-                "Ten FreeFlight Pro o el mando listos para tomar el control."
+            text = tr("Con WiFi directa no hay mandos: el control manual de respaldo es el SkyController. ") +
+                tr("Ten FreeFlight Pro o el mando listos para tomar el control.")
             setTextColor(C_DIM); textSize = 12f; setPadding(0, dp(6), 0, 0)
         })
         root.addView(ms); missionCard = ms
 
         // Registro
-        val lg = card("Registro")
-        lg.addView(row(button("Diagnóstico (compartir registro)", C_GREY) { showDiagnostics() }))
+        val lg = card(tr("Registro"))
+        lg.addView(row(button(tr("Diagnóstico (compartir registro)"), C_GREY) { showDiagnostics() },
+            button("🌐 " + (I18n.LANGS[I18n.lang] ?: "Idioma"), C_GREY) { pickLanguage() }))
         logText = label(12f, mono = true)
         logText.movementMethod = ScrollingMovementMethod()
         lg.addView(logText)
@@ -699,13 +701,13 @@ class MainActivity : Activity(), DroneLink.Listener {
         val ri = if (::resumeBtn.isInitialized) resumeInfo() else null
         if (::resumeBtn.isInitialized) {
             resumeBtn.visibility = if (ri != null) View.VISIBLE else View.GONE
-            ri?.let { resumeBtn.text = "↻ Reanudar misión desde la pasada ${it.first + 1}/${it.second}" }
+            ri?.let { resumeBtn.text = trf("↻ Reanudar misión desde la pasada %1\$s/%2\$s", it.first + 1, it.second) }
             setEnabled(resumeBtn, ri != null && link.telemetry.planStateRaw != 0 && link.telemetry.planStateRaw != 2)
         }
         val t = link.telemetry
         val connected = link.isConnected
         val busy = connected || link.connecting
-        connectBtn.text = if (busy) "Desconectar" else "Conectar"
+        connectBtn.text = if (busy) tr("Desconectar") else tr("Conectar")
         modeSpinner.isEnabled = !busy
         // Plan activo = ejecutando (0) o pausado (2). Mientras tanto no se sube ni se relanza nada.
         val planActive = t.planStateRaw == 0 || t.planStateRaw == 2
@@ -716,15 +718,15 @@ class MainActivity : Activity(), DroneLink.Listener {
         val canStart = if (disco) t.flyingStateRaw == 2 || t.flyingStateRaw == 3 else landed
         setEnabled(startBtn, connected && planUploaded && !planActive && canStart)
         startBtn.text = when {
-            disco && connected && !canStart -> "▶  INICIAR (lanza la Disco primero)"
-            connected && !landed && t.flyingStateRaw >= 0 && !disco -> "▶  INICIAR (solo en tierra)"
-            else -> "▶  INICIAR MISIÓN"
+            disco && connected && !canStart -> tr("▶  INICIAR (lanza la Disco primero)")
+            connected && !landed && t.flyingStateRaw >= 0 && !disco -> tr("▶  INICIAR (solo en tierra)")
+            else -> tr("▶  INICIAR MISIÓN")
         }
         // Pausar/Reanudar se deduce SOLO de lo que informa el dron.
         when (t.planStateRaw) {
-            0 -> { pauseBtn.text = "Pausar"; setEnabled(pauseBtn, connected) }
-            2 -> { pauseBtn.text = "Reanudar"; setEnabled(pauseBtn, connected) }
-            else -> { pauseBtn.text = "Pausar"; setEnabled(pauseBtn, false) }
+            0 -> { pauseBtn.text = tr("Pausar"); setEnabled(pauseBtn, connected) }
+            2 -> { pauseBtn.text = tr("Reanudar"); setEnabled(pauseBtn, connected) }
+            else -> { pauseBtn.text = tr("Pausar"); setEnabled(pauseBtn, false) }
         }
     }
 
@@ -747,10 +749,10 @@ class MainActivity : Activity(), DroneLink.Listener {
                 try { old.disconnect() } catch (_: Throwable) {}
                 link = Flavor.newLink(choice.platform, applicationContext, this)
                 Session.link = link
-                onLog("Modo ${if (choice.platform == Platform.ANAFI) "ANAFI (GroundSDK)" else "Bluegrass/Disco (ARSDK)"}")
+                onLog(trf("Modo %1\$s", if (choice.platform == Platform.ANAFI) "ANAFI (GroundSDK)" else "Bluegrass/Disco (ARSDK)"))
                 setViewMode(Session.showVideo && link.supportsVideo)
             }
-            if (choice.platform == Platform.BLUEGRASS_SEQUOIA && !DroneLink.loadLibs()) { onLog("ERROR: no se pudieron cargar las librerías ARSDK."); return }
+            if (choice.platform == Platform.BLUEGRASS_SEQUOIA && !DroneLink.loadLibs()) { onLog(tr("ERROR: no se pudieron cargar las librerías ARSDK.")); return }
             link.connect(choice)
         }
         refreshButtons()
@@ -781,16 +783,16 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun loadPlan(uri: Uri) {
         try {
             val raw = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                ?: throw IllegalArgumentException("No se pudo leer el fichero")
+                ?: throw IllegalArgumentException(tr("No se pudo leer el fichero"))
             val p = FlightPlan.parse(raw)
             Session.setPlan(p, displayName(uri))
             shownPlanVersion = Session.planVersion
             showPlan(p)
-            onLog("Plan cargado: $planName (${p.items.size} ítems)")
+            onLog(trf("Plan cargado: %1\$s (%2\$s ítems)", planName, p.items.size))
         } catch (e: Exception) {
             plan = null
-            planText.text = "Plan no válido: ${e.message}"
-            onLog("Plan no válido: ${e.message}")
+            planText.text = trf("Plan no válido: %1\$s", e.message)
+            onLog(trf("Plan no válido: %1\$s", e.message))
         }
         refreshButtons()
     }
@@ -807,67 +809,88 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun discoGate(p: FlightPlan, then: () -> Unit) {
         val model = link.telemetry.droneModel
         if (model == 1 && p.isFixedWing) {
-            AlertDialog.Builder(this).setTitle("⛔ Plan de ala fija")
-                .setMessage("Este plan es para la DISCO (sin despegue, con aproximación y aterrizaje en pista). " +
-                    "La Bluegrass necesita un plan de multirrotor: en el planificador cambia a «✚ Bluegrass».")
-                .setPositiveButton("Entendido", null).show()
+            AlertDialog.Builder(this).setTitle(tr("⛔ Plan de ala fija"))
+                .setMessage(tr("Este plan es para la DISCO (sin despegue, con aproximación y aterrizaje en pista). ") +
+                    tr("La Bluegrass necesita un plan de multirrotor: en el planificador cambia a «✚ Bluegrass»."))
+                .setPositiveButton(tr("Entendido"), null).show()
             return
         }
         if (model == 0) {
-            AlertDialog.Builder(this).setTitle("¿Qué dron es?")
-                .setMessage("El dron aún no se ha identificado (Bluegrass o Disco). Espera unos segundos a que se enlace y vuelve a intentarlo.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setTitle(tr("¿Qué dron es?"))
+                .setMessage(tr("El dron aún no se ha identificado (Bluegrass o Disco). Espera unos segundos a que se enlace y vuelve a intentarlo."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         if (model != 2) { then(); return }
         if (p.looksMultirotor || !p.isFixedWing) {
-            AlertDialog.Builder(this).setTitle("⛔ Plan no apto para la Disco")
-                .setMessage("Este plan es de MULTIRROTOR: despega y aterriza en vertical y se para en cada pasada. " +
-                    "La Disco es un ala fija: necesita giros amplios y una aproximación de ~200 m para aterrizar (manual Parrot).\n\n" +
-                    "En el planificador pulsa «✈ Disco», fija el aterrizaje (🛬) y genera el plan de nuevo.")
-                .setPositiveButton("Entendido", null).show()
+            AlertDialog.Builder(this).setTitle(tr("⛔ Plan no apto para la Disco"))
+                .setMessage(tr("Este plan es de MULTIRROTOR: despega y aterriza en vertical y se para en cada pasada. ") +
+                    tr("La Disco es un ala fija: necesita giros amplios y una aproximación de ~200 m para aterrizar (manual Parrot).\n\n") +
+                    tr("En el planificador pulsa «✈ Disco», fija el aterrizaje (🛬) y genera el plan de nuevo."))
+                .setPositiveButton(tr("Entendido"), null).show()
             return
         }
-        val msg = StringBuilder("Antes de subir y volar:\n\n")
-        msg.append("• Lanzamiento a mano DE CARA AL VIENTO; espera a que la Disco esté dando círculos y luego pulsa INICIAR.\n")
-        msg.append("• El pasillo de aproximación (cono azul del planificador) está libre de árboles, cables y gente.\n")
+        val msg = StringBuilder(tr("Antes de subir y volar:\n\n"))
+        msg.append(tr("• Lanzamiento a mano DE CARA AL VIENTO; espera a que la Disco esté dando círculos y luego pulsa INICIAR.\n"))
+        msg.append(tr("• El pasillo de aproximación (cono azul del planificador) está libre de árboles, cables y gente.\n"))
         if (p.items.none { it.command == FlightPlan.CMD_IMAGE_START })
-            msg.append(if (System.currentTimeMillis() - Session.sequoiaArmedAt < 30 * 60_000) "• Sequoia preparada ✔\n"
-                       else "• ⚠ La Sequoia NO está preparada: «Enviar el plan a la Sequoia».\n")
+            msg.append(if (System.currentTimeMillis() - Session.sequoiaArmedAt < 30 * 60_000) tr("• Sequoia preparada ✔\n")
+                       else tr("• ⚠ La Sequoia NO está preparada: «Enviar el plan a la Sequoia».\n"))
         val wind = finalWindNote(p)
         if (wind.startsWith("⛔")) {
-            AlertDialog.Builder(this).setTitle("⛔ Viento de cola en la final")
-                .setMessage(wind + "\n\nCon viento de cola la Disco aterrizaría demasiado rápida y larga. Rehaz el aterrizaje en el planificador.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setTitle(tr("⛔ Viento de cola en la final"))
+                .setMessage(wind + tr("\n\nCon viento de cola la Disco aterrizaría demasiado rápida y larga. Rehaz el aterrizaje en el planificador."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         msg.append("• ").append(wind).append('\n')
-        msg.append("\nSi algo va mal en la final: «Volver a casa» o toma el control con el SkyController.")
-        AlertDialog.Builder(this).setTitle("✈ Plan para la Disco")
+        msg.append(tr("\nSi algo va mal en la final: «Volver a casa» o toma el control con el SkyController."))
+        AlertDialog.Builder(this).setTitle(tr("✈ Plan para la Disco"))
             .setMessage(msg.toString())
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Continuar") { _, _ -> then() }.show()
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Continuar")) { _, _ -> then() }.show()
     }
 
     /** Viento de la previsión respecto a la final del plan (rumbo aproximación → toma). */
     private fun finalWindNote(p: FlightPlan): String {
-        val land = p.items.lastOrNull { it.command == FlightPlan.CMD_LAND } ?: return "⚠ Plan sin aterrizaje."
+        val land = p.items.lastOrNull { it.command == FlightPlan.CMD_LAND } ?: return tr("⚠ Plan sin aterrizaje.")
         val li = p.items.indexOf(land)
-        val ap = p.items.subList(0, li).lastOrNull { it.command == FlightPlan.CMD_WAYPOINT } ?: return "⚠ Plan sin aproximación."
+        val ap = p.items.subList(0, li).lastOrNull { it.command == FlightPlan.CMD_WAYPOINT } ?: return tr("⚠ Plan sin aproximación.")
         val heading = GridPlanner.bearing(LatLon(ap.lat, ap.lon), LatLon(land.lat, land.lon))
         val r = Session.weather
         val stale = r == null || System.currentTimeMillis() - r.fetchedAt > 3600_000L ||
             GridPlanner.distance(LatLon(land.lat, land.lon), LatLon(r.lat, r.lon)) > 5000
-        if (r == null || stale) return "⚠ Viento ACTUAL sin consultar (botón «Meteo y Kp»): comprueba tú que la final (rumbo ${heading.toInt()}°) va de cara al viento."
+        if (r == null || stale) return trf("⚠ Viento ACTUAL sin consultar (botón «Meteo y Kp»): comprueba tú que la final (rumbo %1\$s°) va de cara al viento.", heading.toInt())
         val now = System.currentTimeMillis() / 1000
         val h = r.hours.lastOrNull { it.epochS <= now }?.takeIf { now - it.epochS < 2 * 3600 }
-            ?: return "⚠ Previsión sin la hora actual: comprueba el viento tú mismo."
-        if (h.dir10.isNaN() || h.wind10.isNaN()) return "⚠ Previsión sin dato de viento: comprueba el viento tú mismo."
+            ?: return tr("⚠ Previsión sin la hora actual: comprueba el viento tú mismo.")
+        if (h.dir10.isNaN() || h.wind10.isNaN()) return tr("⚠ Previsión sin dato de viento: comprueba el viento tú mismo.")
         val diff = GridPlanner.angleDiff(heading, h.dir10)
         val head = h.wind10 * Math.cos(Math.toRadians(diff)); val cross = h.wind10 * Math.sin(Math.toRadians(diff))
         return when {
-            head < -1.0 -> "⛔ VIENTO DE COLA en la final (${"%.1f".format(-head)} m/s). Rehaz el aterrizaje con «🌬 Según viento»."
-            cross > 4.0 -> "⚠ Viento cruzado de ${"%.1f".format(cross)} m/s en la final (rumbo ${heading.toInt()}°)."
-            else -> "Viento en la final: ✔ de cara (${"%.1f".format(h.wind10)} m/s del ${Weather.rumbo(h.dir10)})."
+            head < -1.0 -> trf("⛔ VIENTO DE COLA en la final (%1\$s m/s). Rehaz el aterrizaje con «🌬 Según viento».", "%.1f".format(-head))
+            cross > 4.0 -> trf("⚠ Viento cruzado de %1\$s m/s en la final (rumbo %2\$s°).", "%.1f".format(cross), heading.toInt())
+            else -> trf("Viento en la final: ✔ de cara (%1\$s m/s del %2\$s).", "%.1f".format(h.wind10), Weather.rumbo(h.dir10))
         }
+    }
+
+    // ------------------------------------------------------------------ idioma
+
+    private fun pickLanguage() {
+        val codes = listOf("auto") + I18n.LANGS.keys
+        val names = listOf(tr("Automático (idioma del móvil)")) + I18n.LANGS.values
+        val cur = codes.indexOf(I18n.chosen(this)).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("🌐 Idioma · Language")
+            .setSingleChoiceItems(names.toTypedArray(), cur) { d, i ->
+                d.dismiss()
+                prefs.edit().putString(I18n.PREF, codes[i]).apply()
+                if (link.isConnected || link.connecting) {
+                    Toast.makeText(this, tr("El idioma cambiará la próxima vez que abras la app."), Toast.LENGTH_LONG).show()
+                } else {
+                    // Reiniciar la app para que todos los textos (también los ya cargados) salgan en el idioma nuevo.
+                    val i2 = packageManager.getLaunchIntentForPackage(packageName)?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    finishAffinity(); if (i2 != null) startActivity(i2)
+                    Runtime.getRuntime().exit(0)
+                }
+            }.setNegativeButton(tr("Cerrar"), null).show()
     }
 
     // ------------------------------------------------------------------ Sequoia por libre (Disco FPV)
@@ -888,70 +911,70 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     private fun onSequoiaClicked() {
         if (link.telemetry.droneModel == 1) {
-            AlertDialog.Builder(this).setTitle("Bluegrass conectada")
-                .setMessage("En la Bluegrass la Sequoia la gobierna el propio dron con el plan (y le apaga su WiFi). " +
-                    "Esto es para la Disco FPV, donde la Sequoia va por libre.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setTitle(tr("Bluegrass conectada"))
+                .setMessage(tr("En la Bluegrass la Sequoia la gobierna el propio dron con el plan (y le apaga su WiFi). ") +
+                    tr("Esto es para la Disco FPV, donde la Sequoia va por libre."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         val (dist, secs, alt) = sequoiaParamsFromPlan()
         val items = arrayOf(
-            "📍 Por distancia: cada ${"%.0f".format(dist)} m (recomendado)\n   Solo dispara al moverse: empieza sola al despegar",
-            "⏱ Por tiempo: cada ${"%.1f".format(secs)} s\n   Dispara ya, también en tierra",
-            "🔎 Ver lo que tiene programado",
-            "⏹ Parar la captura (después de aterrizar)",
-            "⚙ Nombre de la WiFi / contraseña de la Sequoia")
-        AlertDialog.Builder(this).setTitle("Sequoia · plan a ${alt.toInt()} m" + (if (plan == null) " (sin plan: valores por defecto)" else ""))
+            trf("📍 Por distancia: cada %1\$s m (recomendado)\n   Solo dispara al moverse: empieza sola al despegar", "%.0f".format(dist)),
+            trf("⏱ Por tiempo: cada %1\$s s\n   Dispara ya, también en tierra", "%.1f".format(secs)),
+            tr("🔎 Ver lo que tiene programado"),
+            tr("⏹ Parar la captura (después de aterrizar)"),
+            tr("⚙ Nombre de la WiFi / contraseña de la Sequoia"))
+        AlertDialog.Builder(this).setTitle(trf("Sequoia · plan a %1\$s m", alt.toInt()) + (if (plan == null) tr(" (sin plan: valores por defecto)") else ""))
             .setItems(items) { _, w ->
                 when (w) {
-                    0 -> runSequoia("Preparando la Sequoia (por distancia)…") { it.arm(true, dist) }
-                    1 -> runSequoia("Preparando la Sequoia (por tiempo)…") { it.arm(false, secs) }
-                    2 -> runSequoia("Leyendo la Sequoia…") { it.inspect() }
-                    3 -> runSequoia("Parando la Sequoia…") { it.stop() }
+                    0 -> runSequoia(tr("Preparando la Sequoia (por distancia)…")) { it.arm(true, dist) }
+                    1 -> runSequoia(tr("Preparando la Sequoia (por tiempo)…")) { it.arm(false, secs) }
+                    2 -> runSequoia(tr("Leyendo la Sequoia…")) { it.inspect() }
+                    3 -> runSequoia(tr("Parando la Sequoia…")) { it.stop() }
                     4 -> sequoiaWifiSettings()
                 }
-            }.setNegativeButton("Cerrar", null).show()
+            }.setNegativeButton(tr("Cerrar"), null).show()
     }
 
     private fun sequoiaWifiSettings() {
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
-        val ssid = android.widget.EditText(this).apply { hint = "Empieza por… (p. ej. Sequoia)"; setText(prefs.getString("sequoia_ssid", "Sequoia")); setTextColor(C_TEXT) }
-        val pass = android.widget.EditText(this).apply { hint = "Contraseña (vacío si no tiene)"; setText(prefs.getString("sequoia_pass", "")); setTextColor(C_TEXT) }
-        box.addView(label(13f).apply { text = "Nombre de la WiFi de la Sequoia (o su principio):" }); box.addView(ssid)
-        box.addView(label(13f).apply { text = "Contraseña:" }); box.addView(pass)
-        AlertDialog.Builder(this).setTitle("WiFi de la Sequoia").setView(box)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Guardar") { _, _ ->
-                prefs.edit().putString("sequoia_ssid", ssid.text.toString().trim().ifEmpty { "Sequoia" })
+        val ssid = android.widget.EditText(this).apply { hint = tr("Empieza por… (p. ej. Sequoia)"); setText(prefs.getString("sequoia_ssid", tr("Sequoia"))); setTextColor(C_TEXT) }
+        val pass = android.widget.EditText(this).apply { hint = tr("Contraseña (vacío si no tiene)"); setText(prefs.getString("sequoia_pass", "")); setTextColor(C_TEXT) }
+        box.addView(label(13f).apply { text = tr("Nombre de la WiFi de la Sequoia (o su principio):") }); box.addView(ssid)
+        box.addView(label(13f).apply { text = tr("Contraseña:") }); box.addView(pass)
+        AlertDialog.Builder(this).setTitle(tr("WiFi de la Sequoia")).setView(box)
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Guardar")) { _, _ ->
+                prefs.edit().putString("sequoia_ssid", ssid.text.toString().trim().ifEmpty { tr("Sequoia") })
                     .putString("sequoia_pass", pass.text.toString()).apply()
             }.show()
     }
 
     private fun runSequoia(title: String, job: (SequoiaCam.Session) -> SequoiaCam.Session.Report) {
-        if (seq != null) { Toast.makeText(this, "Ya hay una operación con la Sequoia en curso", Toast.LENGTH_SHORT).show(); return }
+        if (seq != null) { Toast.makeText(this, tr("Ya hay una operación con la Sequoia en curso"), Toast.LENGTH_SHORT).show(); return }
         val s = SequoiaCam.Session(applicationContext); seq = s
-        val txt = label(14f).apply { text = "Buscando la WiFi de la Sequoia…\n(la primera vez Android te pedirá aprobarla)"; setPadding(dp(20), dp(12), dp(20), dp(8)) }
+        val txt = label(14f).apply { text = tr("Buscando la WiFi de la Sequoia…\n(la primera vez Android te pedirá aprobarla)"); setPadding(dp(20), dp(12), dp(20), dp(8)) }
         val dlg = AlertDialog.Builder(this).setTitle(title).setView(txt).setCancelable(false)
-            .setNegativeButton("Cancelar") { _, _ -> s.release(); seq = null }.show()
+            .setNegativeButton(tr("Cancelar")) { _, _ -> s.release(); seq = null }.show()
         fun finish(ok: Boolean, lines: List<String>) = runOnUiThread {
             s.release(); seq = null
             try { dlg.dismiss() } catch (_: Throwable) {}
             if (!canShowDialog()) return@runOnUiThread
-            lines.forEach { onLog("Sequoia: $it") }
-            AlertDialog.Builder(this).setTitle(if (ok) "📷 Sequoia" else "📷 Sequoia: problema")
-                .setMessage(lines.joinToString("\n") + if (ok) "\n\nLa app ya ha soltado la WiFi de la Sequoia: el SkyController sigue conectado." else "")
+            lines.forEach { onLog(trf("Sequoia: %1\$s", it)) }
+            AlertDialog.Builder(this).setTitle(if (ok) tr("📷 Sequoia") else tr("📷 Sequoia: problema"))
+                .setMessage(lines.joinToString("\n") + if (ok) tr("\n\nLa app ya ha soltado la WiFi de la Sequoia: el SkyController sigue conectado.") else "")
                 .setPositiveButton("OK", null).show()
         }
-        s.connect(prefs.getString("sequoia_ssid", "Sequoia") ?: "Sequoia", prefs.getString("sequoia_pass", ""),
+        s.connect(prefs.getString("sequoia_ssid", tr("Sequoia")) ?: tr("Sequoia"), prefs.getString("sequoia_pass", ""),
             ok = { _ ->
-                runOnUiThread { txt.text = "Conectado a la Sequoia. Configurando…" }
+                runOnUiThread { txt.text = tr("Conectado a la Sequoia. Configurando…") }
                 Thread {
                     val r = try { job(s) } catch (t: Throwable) { SequoiaCam.Session.Report(false, listOf("✘ ${t.message ?: t.javaClass.simpleName}")) }
-                    if (r.ok && r.lines.any { it.contains("armada") || it.contains("EN MARCHA") }) Session.sequoiaArmedAt = System.currentTimeMillis()
-                    if (r.ok && r.lines.any { it.contains("Captura parada") }) Session.sequoiaArmedAt = 0L
+                    if (r.ok && r.state == "armed") Session.sequoiaArmedAt = System.currentTimeMillis()
+                    if (r.ok && r.state == "stopped") Session.sequoiaArmedAt = 0L
                     finish(r.ok, r.lines)
                 }.start()
             },
-            fail = { why -> finish(false, listOf("✘ $why", "Comprueba que la Sequoia está encendida y que su WiFi se llama «${prefs.getString("sequoia_ssid", "Sequoia")}…» (⚙ para cambiarlo).")) })
+            fail = { why -> finish(false, listOf("✘ $why", trf("Comprueba que la Sequoia está encendida y que su WiFi se llama «%1\$s…» (⚙ para cambiarlo).", prefs.getString("sequoia_ssid", "Sequoia")))) })
     }
 
     // ------------------------------------------------------------------ meteo + Kp
@@ -977,13 +1000,13 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun onWeatherClicked() {
         val place = weatherPlace()
         if (place == null) {
-            AlertDialog.Builder(this).setMessage("No sé dónde vas a volar: carga un plan, conecta el dron o activa la ubicación del móvil.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setMessage(tr("No sé dónde vas a volar: carga un plan, conecta el dron o activa la ubicación del móvil."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         val cached = Session.weather
         if (cached != null && System.currentTimeMillis() - cached.fetchedAt < 15 * 60_000 &&
             GridPlanner.distance(place, LatLon(cached.lat, cached.lon)) < 3000) { showWeather(cached); return }
-        Toast.makeText(this, "Consultando Open-Meteo y NOAA…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Consultando Open-Meteo y NOAA…"), Toast.LENGTH_SHORT).show()
         Thread {
             val r = try { Result.success(Weather.fetch(place.lat, place.lon)) } catch (t: Throwable) { Result.failure<Weather.Report>(t) }
             runOnUiThread {
@@ -991,10 +1014,10 @@ class MainActivity : Activity(), DroneLink.Listener {
                 r.onSuccess { Session.weather = it; showWeather(it) }
                 r.onFailure {
                     Crumbs.write("meteo: ${it.javaClass.simpleName}: ${it.message}")
-                    AlertDialog.Builder(this).setTitle("Sin datos de meteo")
-                        .setMessage("No se pudo consultar (${it.message ?: it.javaClass.simpleName}). Hace falta internet: " +
-                            "datos móviles vale aunque estés en la WiFi del dron.")
-                        .setPositiveButton("Entendido", null).show()
+                    AlertDialog.Builder(this).setTitle(tr("Sin datos de meteo"))
+                        .setMessage(trf("No se pudo consultar (%1\$s). Hace falta internet: ", it.message ?: it.javaClass.simpleName) +
+                            tr("datos móviles vale aunque estés en la WiFi del dron."))
+                        .setPositiveButton(tr("Entendido"), null).show()
                 }
             }
         }.start()
@@ -1017,32 +1040,32 @@ class MainActivity : Activity(), DroneLink.Listener {
         val planMin = plan?.estimatedMinutes()
         val now = System.currentTimeMillis() / 1000
         val upcoming = r.hours.filter { it.epochS >= now - 3600 }.take(13)
-        if (upcoming.isEmpty()) { onLog("Meteo: informe sin horas útiles"); return }
+        if (upcoming.isEmpty()) { onLog(tr("Meteo: informe sin horas útiles")); return }
         val verdicts = upcoming.map { Pair(it, Weather.evaluate(it, r.kpAt(it.epochS), a, alt, planMin)) }
         val (h0, v0) = verdicts[0]
         val sb = StringBuilder()
-        sb.append("${a.label} · altura ${alt.toInt()} m${if (planMin != null) " · plan ≈${"%.0f".format(planMin)} min" else ""}\n")
-        sb.append("Ahora (${h0.label}): ${v0.icon} ${v0.word}\n\n")
+        sb.append(trf("%1\$s · altura %2\$s m%3\$s\n", a.label, alt.toInt(), if (planMin != null) " · plan ≈${"%.0f".format(planMin)} min" else ""))
+        sb.append(trf("Ahora (%1\$s): %2\$s %3\$s\n\n", h0.label, v0.icon, v0.word))
         v0.reasons.forEach { sb.append(it).append('\n') }
-        sb.append("\nPróximas horas:\n")
+        sb.append(tr("\nPróximas horas:\n"))
         for ((h, v) in verdicts.drop(1)) {
             sb.append("${v.icon} ${h.label}  ${"%.1f".format(v.windAlt)} m/s")
-            if (!v.gustAlt.isNaN()) sb.append(" · ráf ${"%.1f".format(v.gustAlt)}")
-            if (!h.precipProb.isNaN() && h.precipProb >= 20) sb.append(" · lluvia ${h.precipProb.toInt()} %")
-            r.kpAt(h.epochS)?.let { if (it.kp >= 4) sb.append(" · Kp ${"%.1f".format(it.kp)}") }
+            if (!v.gustAlt.isNaN()) sb.append(trf(" · ráf %1\$s", "%.1f".format(v.gustAlt)))
+            if (!h.precipProb.isNaN() && h.precipProb >= 20) sb.append(trf(" · lluvia %1\$s %%", h.precipProb.toInt()))
+            r.kpAt(h.epochS)?.let { if (it.kp >= 4) sb.append(trf(" · Kp %1\$s", "%.1f".format(it.kp))) }
             sb.append('\n')
         }
         // Mejor ventana: primera racha de ≥2 horas verdes
         val idx = verdicts.indices.firstOrNull { i -> verdicts[i].second.level == 0 && verdicts.getOrNull(i + 1)?.second?.level == 0 }
-        sb.append(if (idx != null) "\nPrimera ventana buena: desde ${verdicts[idx].first.label}.\n" else "\nNo hay 2 horas seguidas en verde en las próximas 12 h.\n")
-        if (r.kpError != null) sb.append("\n(Kp: no se pudo consultar a la NOAA: ${r.kpError})\n")
-        sb.append("\nFuentes: Open-Meteo (previsión), NOAA SWPC (Kp). Viento máximo según manual Parrot " +
-            "(Bluegrass 8 m/s, Disco 12 m/s); el resto son criterios prudentes de la app. La previsión no sustituye a mirar el cielo.")
-        val b = AlertDialog.Builder(this).setTitle("${v0.icon} Meteo: ${v0.word}")
+        sb.append(if (idx != null) trf("\nPrimera ventana buena: desde %1\$s.\n", verdicts[idx].first.label) else tr("\nNo hay 2 horas seguidas en verde en las próximas 12 h.\n"))
+        if (r.kpError != null) sb.append(trf("\n(Kp: no se pudo consultar a la NOAA: %1\$s)\n", r.kpError))
+        sb.append(tr("\nFuentes: Open-Meteo (previsión), NOAA SWPC (Kp). Viento máximo según manual Parrot ") +
+            tr("(Bluegrass 8 m/s, Disco 12 m/s); el resto son criterios prudentes de la app. La previsión no sustituye a mirar el cielo."))
+        val b = AlertDialog.Builder(this).setTitle(trf("%1\$s Meteo: %2\$s", v0.icon, v0.word))
             .setMessage(sb.toString())
             .setPositiveButton("OK", null)
-            .setNeutralButton("Actualizar") { _, _ -> Session.weather = null; onWeatherClicked() }
-        if (link.telemetry.droneModel == 0) b.setNegativeButton(if (a == Airframe.DISCO) "Ver para Bluegrass" else "Ver para Disco") { _, _ ->
+            .setNeutralButton(tr("Actualizar")) { _, _ -> Session.weather = null; onWeatherClicked() }
+        if (link.telemetry.droneModel == 0) b.setNegativeButton(if (a == Airframe.DISCO) tr("Ver para Bluegrass") else tr("Ver para Disco")) { _, _ ->
             prefs.edit().putString("airframe", if (a == Airframe.DISCO) "BLUEGRASS" else "DISCO").apply()
             showWeather(r)
         }
@@ -1056,18 +1079,18 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     private fun doUpload(p: FlightPlan) {
         if (p.platform != link.platform) {
-            AlertDialog.Builder(this).setTitle("Plan de otro dron")
-                .setMessage("Este plan está hecho para ${if (p.platform == Platform.ANAFI) "ANAFI" else "Bluegrass/Disco (Sequoia)"}, " +
-                    "pero estás conectado a ${if (link.platform == Platform.ANAFI) "una ANAFI" else "Bluegrass/Disco"}. " +
-                    "Genera el plan en el planificador eligiendo la cámara correcta.")
-                .setPositiveButton("Entendido", null).show()
+            AlertDialog.Builder(this).setTitle(tr("Plan de otro dron"))
+                .setMessage(trf("Este plan está hecho para %1\$s, ", if (p.platform == Platform.ANAFI) "ANAFI" else "Bluegrass/Disco (Sequoia)") +
+                    trf("pero estás conectado a %1\$s. ", if (link.platform == Platform.ANAFI) "una ANAFI" else "Bluegrass/Disco") +
+                    tr("Genera el plan en el planificador eligiendo la cámara correcta."))
+                .setPositiveButton(tr("Entendido"), null).show()
             return
         }
         setEnabled(uploadBtn, false)
         planUploaded = false
         link.uploadPlan(p) { ok ->
             planUploaded = ok
-            if (ok) Toast.makeText(this, "Plan subido", Toast.LENGTH_SHORT).show()
+            if (ok) Toast.makeText(this, tr("Plan subido"), Toast.LENGTH_SHORT).show()
             refreshButtons()
         }
     }
@@ -1077,19 +1100,19 @@ class MainActivity : Activity(), DroneLink.Listener {
         if ((link.telemetry.droneModel == 2 && !p.isFixedWing) || (link.telemetry.droneModel == 1 && p.isFixedWing)) { discoGate(p) {}; return }
         val t = link.telemetry
         val issues = ArrayList<String>()
-        if (!t.gpsFix) issues.add("El dron NO tiene fix GPS.")
+        if (!t.gpsFix) issues.add(tr("El dron NO tiene fix GPS."))
         val rthLvl = rthBatteryLevel()
         if (t.battery in 0..(if (rthLvl > 0) rthLvl + 5 else 20)) {
-            AlertDialog.Builder(this).setTitle("Batería al ${t.battery} %")
-                .setMessage(if (rthLvl > 0) "Con la vuelta a casa automática al $rthLvl %, el dron volvería nada más despegar. Cambia la batería."
-                    else "Batería demasiado baja para empezar una misión. Cambia la batería.")
-                .setPositiveButton("Entendido", null).show()
+            AlertDialog.Builder(this).setTitle(trf("Batería al %1\$s %%", t.battery))
+                .setMessage(if (rthLvl > 0) trf("Con la vuelta a casa automática al %1\$s %%, el dron volvería nada más despegar. Cambia la batería.", rthLvl)
+                    else tr("Batería demasiado baja para empezar una misión. Cambia la batería."))
+                .setPositiveButton(tr("Entendido"), null).show()
             return
         }
-        if (t.battery in 0..39) issues.add("Batería del dron al ${t.battery} %.")
-        if (t.magnetoCalibrationRequired == true) issues.add("El dron pide calibrar el magnetómetro.")
-        if (t.planAvailable == false) issues.add("El dron dice que el plan NO está disponible.")
-        t.components.filterValues { !it }.keys.forEach { issues.add("Comprobación fallida: $it") }
+        if (t.battery in 0..39) issues.add(trf("Batería del dron al %1\$s %%.", t.battery))
+        if (t.magnetoCalibrationRequired == true) issues.add(tr("El dron pide calibrar el magnetómetro."))
+        if (t.planAvailable == false) issues.add(tr("El dron dice que el plan NO está disponible."))
+        t.components.filterValues { !it }.keys.forEach { issues.add(trf("Comprobación fallida: %1\$s", it)) }
         issues.addAll(p.warnings())
 
         val known = t.lat != 500.0 && t.lon != 500.0 && !(t.lat == 0.0 && t.lon == 0.0)
@@ -1099,40 +1122,40 @@ class MainActivity : Activity(), DroneLink.Listener {
             p.landPoint?.let {
                 val dl = FlightPlan.haversine(t.lat, t.lon, it.lat, it.lon)
                 if (dl > FixedWing.MAX_LAND_FROM_LAUNCH) {
-                    AlertDialog.Builder(this).setTitle("⛔ Aterrizaje lejos")
-                        .setMessage("El punto de toma del plan está a ${dl.toInt()} m de la Disco. ¿Es el plan de otra parcela? Revísalo en el planificador.")
-                        .setPositiveButton("Entendido", null).show()
+                    AlertDialog.Builder(this).setTitle(tr("⛔ Aterrizaje lejos"))
+                        .setMessage(trf("El punto de toma del plan está a %1\$s m de la Disco. ¿Es el plan de otra parcela? Revísalo en el planificador.", dl.toInt()))
+                        .setPositiveButton(tr("Entendido"), null).show()
                     return
                 }
             }
             // Ala fija: el aterrizaje está a ~200 m del lanzamiento (cono). Nunca se mueve; solo se avisa del lanzamiento.
             p.takeoffPoint?.takeIf { !(it.lat == 0.0 && it.lon == 0.0) }?.let {
                 val d = FlightPlan.haversine(t.lat, t.lon, it.lat, it.lon)
-                if (d > 50.0) issues.add("Disco: el punto de lanzamiento del plan está a ${d.toInt()} m del dron.")
+                if (d > 50.0) issues.add(trf("Disco: el punto de lanzamiento del plan está a %1\$s m del dron.", d.toInt()))
             }
         }
         val land = if (isDisco) null else p.homePoint
         if (land != null) {
             if (!known) {
-                AlertDialog.Builder(this).setTitle("Sin posición del dron")
-                    .setMessage("El dron aún no informa de su posición GPS, así que no se puede comprobar dónde aterrizará. Espera al fix GPS.")
-                    .setPositiveButton("Entendido", null).show()
+                AlertDialog.Builder(this).setTitle(tr("Sin posición del dron"))
+                    .setMessage(tr("El dron aún no informa de su posición GPS, así que no se puede comprobar dónde aterrizará. Espera al fix GPS."))
+                    .setPositiveButton(tr("Entendido"), null).show()
                 return
             }
             val dHome = FlightPlan.haversine(t.lat, t.lon, land.lat, land.lon)
             if (dHome > 15.0) {
-                AlertDialog.Builder(this).setTitle("La casa del plan no es esta")
-                    .setMessage("El plan despegaría/aterrizaría a ${dHome.toInt()} m de donde está el dron.\n\n" +
-                        "¿Mover la casa del plan a la posición actual del dron? Después tendrás que volver a subirlo.")
-                    .setNegativeButton("Cancelar", null)
-                    .setPositiveButton("Mover casa") { _, _ ->
+                AlertDialog.Builder(this).setTitle(tr("La casa del plan no es esta"))
+                    .setMessage(trf("El plan despegaría/aterrizaría a %1\$s m de donde está el dron.\n\n", dHome.toInt()) +
+                        tr("¿Mover la casa del plan a la posición actual del dron? Después tendrás que volver a subirlo."))
+                    .setNegativeButton(tr("Cancelar"), null)
+                    .setPositiveButton(tr("Mover casa")) { _, _ ->
                         try {
                             val np = p.withHome(t.lat, t.lon)
                             Session.setPlan(np, planName)
                             shownPlanVersion = Session.planVersion
-                            showPlan(np); onLog("Casa del plan movida a la posición del dron. Vuelve a subir el plan.")
+                            showPlan(np); onLog(tr("Casa del plan movida a la posición del dron. Vuelve a subir el plan."))
                             refreshButtons()
-                        } catch (e: Exception) { onLog("No se pudo mover la casa: ${e.message}") }
+                        } catch (e: Exception) { onLog(trf("No se pudo mover la casa: %1\$s", e.message)) }
                     }.show()
                 return
             }
@@ -1144,55 +1167,55 @@ class MainActivity : Activity(), DroneLink.Listener {
             val dist = FlightPlan.haversine(t.lat, t.lon, first.lat, first.lon)
             if (dist > 1000.0) {
                 AlertDialog.Builder(this)
-                    .setTitle("Plan bloqueado")
-                    .setMessage("El primer waypoint está a ${"%.1f".format(dist / 1000)} km del dron. " +
-                        "Ese plan no es de este campo. Carga el plan correcto.")
-                    .setPositiveButton("Entendido", null).show()
+                    .setTitle(tr("Plan bloqueado"))
+                    .setMessage(trf("El primer waypoint está a %1\$s km del dron. ", "%.1f".format(dist / 1000)) +
+                        tr("Ese plan no es de este campo. Carga el plan correcto."))
+                    .setPositiveButton(tr("Entendido"), null).show()
                 return
             }
-            if (dist > 300.0) issues.add("El primer waypoint está a ${"%.0f".format(dist)} m del dron.")
+            if (dist > 300.0) issues.add(trf("El primer waypoint está a %1\$s m del dron.", "%.0f".format(dist)))
         } else if (first != null) {
-            issues.add("Posición del dron desconocida: no se puede comprobar que el plan sea de este campo.")
+            issues.add(tr("Posición del dron desconocida: no se puede comprobar que el plan sea de este campo."))
         }
 
         if (t.droneModel == 2 && System.currentTimeMillis() - Session.sequoiaArmedAt > 30 * 60_000)
-            issues.add("Sequoia sin preparar (botón «Enviar el plan a la Sequoia»): sin eso no habrá fotos.")
+            issues.add(tr("Sequoia sin preparar (botón «Enviar el plan a la Sequoia»): sin eso no habrá fotos."))
         // Meteo: si hay un informe reciente de esta zona, cuenta; si no, se recuerda consultarlo.
         val wr = Session.weather
         val place = dronePos(t) ?: p.homePoint?.let { LatLon(it.lat, it.lon) } ?: p.waypoints.firstOrNull()?.let { LatLon(it.lat, it.lon) }
         val wv = if (wr != null && place != null && System.currentTimeMillis() - wr.fetchedAt < 60 * 60_000 &&
             GridPlanner.distance(place, LatLon(wr.lat, wr.lon)) < 5000) weatherVerdictNow(wr, airframeNow()) else null
         when {
-            wv == null -> issues.add("Meteo no comprobada (botón «Meteo y Kp»).")
-            wv.second.level == 2 -> issues.add("METEO: NO VOLAR → " + wv.second.reasons.filter { it.startsWith("⛔") }.joinToString(" ") { it.removePrefix("⛔ ") })
-            wv.second.level == 1 -> issues.add("Meteo: precaución → " + wv.second.reasons.filter { it.startsWith("⚠") }.joinToString(" ") { it.removePrefix("⚠ ") })
+            wv == null -> issues.add(tr("Meteo no comprobada (botón «Meteo y Kp»)."))
+            wv.second.level == 2 -> issues.add(tr("METEO: NO VOLAR → ") + wv.second.reasons.filter { it.startsWith("⛔") }.joinToString(" ") { it.removePrefix("⛔ ") })
+            wv.second.level == 1 -> issues.add(tr("Meteo: precaución → ") + wv.second.reasons.filter { it.startsWith("⚠") }.joinToString(" ") { it.removePrefix("⚠ ") })
         }
 
         val msg = StringBuilder()
-        msg.append("Plan: $planName\n${p.summary()}\n\n")
-        if (issues.isEmpty()) msg.append("✔ Sin avisos.\n\n") else msg.append("AVISOS:\n• ${issues.joinToString("\n• ")}\n\n")
-        msg.append(if (t.droneModel == 2) "La Disco ya está en el aire: al iniciar dejará los círculos e irá a la primera pasada. Marca todo para poder volar:"
-                   else "Si el dron está en tierra, DESPEGARÁ solo. Marca todo para poder volar:")
+        msg.append(trf("Plan: %1\$s\n%2\$s\n\n", planName, p.summary()))
+        if (issues.isEmpty()) msg.append(tr("✔ Sin avisos.\n\n")) else msg.append(trf("AVISOS:\n• %1\$s\n\n", issues.joinToString("\n• ")))
+        msg.append(if (t.droneModel == 2) tr("La Disco ya está en el aire: al iniciar dejará los círculos e irá a la primera pasada. Marca todo para poder volar:")
+                   else tr("Si el dron está en tierra, DESPEGARÁ solo. Marca todo para poder volar:"))
 
         // Lista de comprobación obligatoria
         val calib = Session.calibratedAt
         val checks = listOf(
-            "Hélices bien montadas, apretadas y sin daños",
-            "Batería del dron cargada y bien encajada",
-            if (link.platform == Platform.ANAFI) "Tarjeta SD de la ANAFI con espacio y gimbal libre (sin protector)"
-            else "Sequoia encendida (luz) y con espacio en la tarjeta SD",
-            if (calib != null) "Calibración de cámara hecha (${calib})" else "Calibración de cámara hecha (o asumo que no la necesito)",
-            "Zona despejada, sin personas debajo, y vuelo permitido (zonas UAS / ENAIRE)",
-            "Viento aceptable y SkyController en la mano para tomar el control"
+            tr("Hélices bien montadas, apretadas y sin daños"),
+            tr("Batería del dron cargada y bien encajada"),
+            if (link.platform == Platform.ANAFI) tr("Tarjeta SD de la ANAFI con espacio y gimbal libre (sin protector)")
+            else tr("Sequoia encendida (luz) y con espacio en la tarjeta SD"),
+            if (calib != null) trf("Calibración de cámara hecha (%1\$s)", calib) else tr("Calibración de cámara hecha (o asumo que no la necesito)"),
+            tr("Zona despejada, sin personas debajo, y vuelo permitido (zonas UAS / ENAIRE)"),
+            tr("Viento aceptable y SkyController en la mano para tomar el control")
         )
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         box.addView(TextView(this).apply { text = msg.toString(); textSize = 14f; setPadding(0, 0, 0, dp(8)) })
         val cbs = checks.map { c -> android.widget.CheckBox(this).apply { text = c; textSize = 15f } }
         cbs.forEach { box.addView(it) }
         val dialog = AlertDialog.Builder(this)
-            .setTitle(if (issues.isEmpty()) "¿Iniciar misión?" else "¿Iniciar misión CON AVISOS?")
+            .setTitle(if (issues.isEmpty()) tr("¿Iniciar misión?") else tr("¿Iniciar misión CON AVISOS?"))
             .setView(ScrollView(this).apply { addView(box) })
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(tr("Cancelar"), null)
             .setPositiveButton("VOLAR") { _, _ ->
                 // Reverificar: el estado puede haber cambiado con el diálogo abierto.
                 refreshButtons()
@@ -1204,7 +1227,7 @@ class MainActivity : Activity(), DroneLink.Listener {
                     Session.missionStartedAt = System.currentTimeMillis(); Session.missionAirborne = false
                     link.startMission()
                 }
-                else onLog("Inicio cancelado: el estado del dron cambió (enlace, plan o vuelo).")
+                else onLog(tr("Inicio cancelado: el estado del dron cambió (enlace, plan o vuelo)."))
             }
             .create()
         dialog.setOnShowListener {
@@ -1236,44 +1259,44 @@ class MainActivity : Activity(), DroneLink.Listener {
         val p = active.plan
         val t = link.telemetry
         AlertDialog.Builder(this)
-            .setTitle("Reanudar misión")
-            .setMessage("Se generará un plan que empieza en la pasada ${k + 1} de $n (la pasada interrumpida se repite entera para no dejar huecos)." +
-                "\n\nLa casa será la posición actual del dron. Después: Subir al dron e INICIAR.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Generar") { _, _ ->
+            .setTitle(tr("Reanudar misión"))
+            .setMessage(trf("Se generará un plan que empieza en la pasada %1\$s de %2\$s (la pasada interrumpida se repite entera para no dejar huecos).", k + 1, n) +
+                tr("\n\nLa casa será la posición actual del dron. Después: Subir al dron e INICIAR."))
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Generar")) { _, _ ->
                 try {
                     var r = p.resumeFromPass(k)
                     // Disco: no tocar despegue/aterrizaje (el cono de aterrizaje es del plan original).
                     if (t.droneModel != 2) dronePos(t)?.let { r = r.withHome(it.lat, it.lon) }
                     val base = active.name.removeSuffix(".mavlink").substringBefore(" · reanudar")
-                    Session.setPlan(r, "$base · reanudar p${k + 1}")
+                    Session.setPlan(r, trf("%1\$s · reanudar p%2\$s", base, k + 1))
                     shownPlanVersion = Session.planVersion
                     showPlan(r); refreshButtons()
-                    onLog("Plan de reanudación listo (pasadas ${k + 1}-$n). Súbelo e inicia.")
-                } catch (e: Exception) { onLog("No se pudo generar la reanudación: ${e.message}") }
+                    onLog(trf("Plan de reanudación listo (pasadas %1\$s-%2\$s). Súbelo e inicia.", k + 1, n))
+                } catch (e: Exception) { onLog(trf("No se pudo generar la reanudación: %1\$s", e.message)) }
             }.show()
     }
 
     // ------------------------------------------------------------------ calibración radiométrica Sequoia
 
     private fun onCalibrateClicked() {
-        if (!link.isConnected) { onLog("Conecta primero con el dron."); return }
+        if (!link.isConnected) { onLog(tr("Conecta primero con el dron.")); return }
         if (link.platform == Platform.ANAFI) {
             AlertDialog.Builder(this)
-                .setTitle("Calibración del sensor térmico (ANAFI Thermal)")
-                .setMessage("Recalibra el sensor térmico (el obturador hace clic). Hazlo con el dron ya encendido unos minutos, " +
-                    "justo antes de despegar, para que las temperaturas sean consistentes en todo el vuelo.")
-                .setNegativeButton("Cancelar", null)
+                .setTitle(tr("Calibración del sensor térmico (ANAFI Thermal)"))
+                .setMessage(tr("Recalibra el sensor térmico (el obturador hace clic). Hazlo con el dron ya encendido unos minutos, ") +
+                    tr("justo antes de despegar, para que las temperaturas sean consistentes en todo el vuelo."))
+                .setNegativeButton(tr("Cancelar"), null)
                 .setPositiveButton("CALIBRAR") { _, _ -> lastCalibResult = -1; calibRequested = true; link.cameraCalibration() }
                 .show()
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Calibración radiométrica (Sequoia)")
-            .setMessage("1. Coloca el panel de calibración en el suelo, a pleno sol y sin sombras.\n" +
-                "2. Sujeta el dron (o la Sequoia) a ~1 m por encima, con la cámara apuntando al panel y sin tapar el sensor de luz superior.\n" +
-                "3. Pulsa CALIBRAR y no te muevas hasta que salga el resultado.")
-            .setNegativeButton("Cancelar", null)
+            .setTitle(tr("Calibración radiométrica (Sequoia)"))
+            .setMessage(tr("1. Coloca el panel de calibración en el suelo, a pleno sol y sin sombras.\n") +
+                tr("2. Sujeta el dron (o la Sequoia) a ~1 m por encima, con la cámara apuntando al panel y sin tapar el sensor de luz superior.\n") +
+                tr("3. Pulsa CALIBRAR y no te muevas hasta que salga el resultado."))
+            .setNegativeButton(tr("Cancelar"), null)
             .setPositiveButton("CALIBRAR") { _, _ -> lastCalibResult = -1; calibRequested = true; link.cameraCalibration() }
             .show()
     }
@@ -1281,7 +1304,7 @@ class MainActivity : Activity(), DroneLink.Listener {
     /** Un doble toque en VOLAR caía en «Pausar» justo debajo (visto en vuelo real): se ignora 2 s tras iniciar. */
     private fun justStarted(): Boolean {
         val recent = System.currentTimeMillis() - Session.missionStartedAt < 2000
-        if (recent) onLog("Toque ignorado (la misión acaba de arrancar)")
+        if (recent) onLog(tr("Toque ignorado (la misión acaba de arrancar)"))
         return recent
     }
 
@@ -1290,17 +1313,17 @@ class MainActivity : Activity(), DroneLink.Listener {
         when (link.telemetry.planStateRaw) {
             0 -> link.pauseMission()
             2 -> link.resumeMission()
-            else -> onLog("No hay plan en curso que pausar/reanudar.")
+            else -> onLog(tr("No hay plan en curso que pausar/reanudar."))
         }
     }
 
     private fun confirmEmergency() {
         AlertDialog.Builder(this)
-            .setTitle("¿CORTAR MOTORES?")
-            .setMessage("El dron CAERÁ. Úsalo solo si va a herir a alguien o está fuera de control.\n\n" +
-                "Para casi todo lo demás: Parar, Volver a casa o Aterrizar.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("CORTAR MOTORES") { _, _ -> link.emergency() }
+            .setTitle(tr("¿CORTAR MOTORES?"))
+            .setMessage(tr("El dron CAERÁ. Úsalo solo si va a herir a alguien o está fuera de control.\n\n") +
+                tr("Para casi todo lo demás: Parar, Volver a casa o Aterrizar."))
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("CORTAR MOTORES")) { _, _ -> link.emergency() }
             .show()
     }
 
@@ -1308,22 +1331,22 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun showDiagnostics() {
         val sb = StringBuilder()
         val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Throwable) { "?" }
-        sb.append("Racoon AgroMapper v$ver · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}\n")
-        sb.append("Modo: ${link.modeName}  Estado: ${link.telemetry.connection}  Dron: ${link.telemetry.extension}\n\n")
-        sb.append("== Registro de la app ==\n").append(logLines.reversed().joinToString("\n")).append("\n\n")
-        Session.lastCrash?.let { sb.append("== Último fallo Java ==\n").append(it).append("\n\n") }
-        sb.append("== Rastro (sobrevive a cierres) ==\n").append(Crumbs.tail(120)).append("\n\n")
+        sb.append(trf("Racoon AgroMapper v%1\$s · %2\$s %3\$s · Android %4\$s\n", ver, android.os.Build.MANUFACTURER, android.os.Build.MODEL, android.os.Build.VERSION.RELEASE))
+        sb.append(trf("Modo: %1\$s  Estado: %2\$s  Dron: %3\$s\n\n", link.modeName, link.telemetry.connection, link.telemetry.extension))
+        sb.append(tr("== Registro de la app ==\n")).append(logLines.reversed().joinToString("\n")).append("\n\n")
+        Session.lastCrash?.let { sb.append(tr("== Último fallo Java ==\n")).append(it).append("\n\n") }
+        sb.append(tr("== Rastro (sobrevive a cierres) ==\n")).append(Crumbs.tail(120)).append("\n\n")
         fun logcat(vararg args: String, filter: (String) -> Boolean = { true }, max: Int) {
             try {
                 val p = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "time", *args))
                 p.inputStream.bufferedReader().readLines().filter(filter).takeLast(max).forEach { sb.append(it).append('\n') }
-            } catch (e: Exception) { sb.append("(logcat: ${e.message})\n") }
+            } catch (e: Exception) { sb.append(trf("(logcat: %1\$s)\n", e.message)) }
         }
-        sb.append("== Fallos (buffer crash) ==\n")
+        sb.append(tr("== Fallos (buffer crash) ==\n"))
         logcat("-b", "crash", max = 200)
         // Sin filtro de PID: Android solo nos deja ver nuestros propios registros, también los del proceso anterior.
         val noise = Regex("MiuiMultiWindow|ForceDark|OpenGLRenderer|GraphicsEnvironment|nativeloader|Perf |ViewScrollStub|MessageMonitor|AppScout|CompatibilityChange|NetworkSecurityConfig")
-        sb.append("\n== Registro ARSDK / sistema ==\n")
+        sb.append(tr("\n== Registro ARSDK / sistema ==\n"))
         logcat("-b", "main,system", filter = { !noise.containsMatchIn(it) }, max = 600)
         val text = sb.toString()
         val tv = TextView(this).apply {
@@ -1331,14 +1354,14 @@ class MainActivity : Activity(), DroneLink.Listener {
             setPadding(dp(12), dp(8), dp(12), dp(8))
         }
         AlertDialog.Builder(this)
-            .setTitle("Diagnóstico")
+            .setTitle(tr("Diagnóstico"))
             .setView(ScrollView(this).apply { addView(tv) })
-            .setNegativeButton("Cerrar", null)
-            .setPositiveButton("Compartir") { _, _ ->
-                val i = Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Racoon AgroMapper diagnóstico")
+            .setNegativeButton(tr("Cerrar"), null)
+            .setPositiveButton(tr("Compartir")) { _, _ ->
+                val i = Intent(Intent.ACTION_SEND).setType(tr("text/plain"))
+                    .putExtra(Intent.EXTRA_SUBJECT, tr("Racoon AgroMapper diagnóstico"))
                     .putExtra(Intent.EXTRA_TEXT, if (text.length > 400_000) text.takeLast(400_000) else text)
-                startActivity(Intent.createChooser(i, "Enviar diagnóstico"))
+                startActivity(Intent.createChooser(i, tr("Enviar diagnóstico")))
             }
             .show()
     }
@@ -1354,9 +1377,9 @@ class MainActivity : Activity(), DroneLink.Listener {
             calibRequested = false
             lastCalibResult = t.radioCalibResult
             if (t.radioCalibResult == 0) {
-                Session.calibratedAt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(java.util.Date())
-                Toast.makeText(this, "Calibración radiométrica OK", Toast.LENGTH_LONG).show()
-            } else Toast.makeText(this, "La calibración radiométrica FALLÓ: repítela", Toast.LENGTH_LONG).show()
+                Session.calibratedAt = java.text.SimpleDateFormat(tr("HH:mm"), java.util.Locale.ROOT).format(java.util.Date())
+                Toast.makeText(this, tr("Calibración radiométrica OK"), Toast.LENGTH_LONG).show()
+            } else Toast.makeText(this, tr("La calibración radiométrica FALLÓ: repítela"), Toast.LENGTH_LONG).show()
         }
         FlightRecorder.update(applicationContext, t, planName)
         // Cronómetro real de la misión (despegue → aterrizaje) para calibrar la estimación.
@@ -1365,45 +1388,45 @@ class MainActivity : Activity(), DroneLink.Listener {
             else if (t.flyingStateRaw == 0 && Session.missionAirborne) {
                 val s = (System.currentTimeMillis() - Session.missionStartedAt) / 1000
                 val est = plan?.estimatedMinutes()
-                onLog("Misión: ${s / 60} min ${s % 60} s de INICIAR a en tierra" +
-                    (if (est != null) " (estimado en vuelo ${"%.1f".format(est)} min" + (if (Session.plannerEstimateS > 0) ", planificador ${"%.1f".format(Session.plannerEstimateS / 60)} min" else "") + ")" else ""))
+                onLog(trf("Misión: %1\$s min %2\$s s de INICIAR a en tierra", s / 60, s % 60) +
+                    (if (est != null) trf(" (estimado en vuelo %1\$s min", "%.1f".format(est)) + (if (Session.plannerEstimateS > 0) trf(", planificador %1\$s min", "%.1f".format(Session.plannerEstimateS / 60)) else "") + ")" else ""))
                 Session.missionStartedAt = 0L; Session.missionAirborne = false
             }
         }
         updateFlightMap(t)
         updateOsd(t)
         updateAlerts(t)
-        rthDiscBtn.text = "Si se pierde el enlace: " + when (link.telemetry.rthOnDisconnect) {
-            1 -> "VUELVE A CASA"; 0 -> "SIGUE EL PLAN"; else -> "—"
+        rthDiscBtn.text = tr("Si se pierde el enlace: ") + when (link.telemetry.rthOnDisconnect) {
+            1 -> tr("VUELVE A CASA"); 0 -> tr("SIGUE EL PLAN"); else -> "—"
         }
         connText.text = buildString {
-            append("Estado: ${t.connection}")
+            append(trf("Estado: %1\$s", t.connection))
             if (t.productName.isNotEmpty()) append("  ·  ${t.productName}")
-            if (t.extension.isNotEmpty()) append("\nDron: ${t.extension}")
+            if (t.extension.isNotEmpty()) append(trf("\nDron: %1\$s", t.extension))
         }
         connText.setTextColor(if (t.connected) C_GREEN else C_TEXT)
 
         val pos = if (t.lat == 500.0 || t.lon == 500.0) "—" else "%.6f, %.6f".format(t.lat, t.lon)
         telemText.text = buildString {
-            append("Batería     ${if (t.battery < 0) "—" else "${t.battery} %"}")
-            if (t.controllerBattery >= 0) append("   (mando ${t.controllerBattery} %)")
-            append("\nGPS         ${if (t.gpsFix) "FIX" else "sin fix"}  ·  ${if (t.satellites < 0) "—" else t.satellites} sat")
-            append("\nVuelo       ${t.flyingState}")
-            append("\nAltura      ${fmt(t.altitude, 1, "m")}   Vel ${fmt(t.speed, 1, "m/s")}")
-            append("\nPosición    $pos")
-            append("\nPlan        ${t.planState}${if (t.missionItem >= 0) "  ·  ítem ${t.missionItem}" else ""}")
-            if (t.planError.isNotEmpty()) append("\n⚠ Error plan: ${t.planError}")
-            append("\nCasa        ${t.navigateHome}")
+            append(trf("Batería     %1\$s", if (t.battery < 0) "—" else "${t.battery} %"))
+            if (t.controllerBattery >= 0) append(trf("   (mando %1\$s %%)", t.controllerBattery))
+            append(trf("\nGPS         %1\$s  ·  %2\$s sat", if (t.gpsFix) "FIX" else "sin fix", if (t.satellites < 0) "—" else t.satellites))
+            append(trf("\nVuelo       %1\$s", t.flyingState))
+            append(trf("\nAltura      %1\$s   Vel %2\$s", fmt(t.altitude, 1, "m"), fmt(t.speed, 1, "m/s")))
+            append(trf("\nPosición    %1\$s", pos))
+            append(trf("\nPlan        %1\$s%2\$s", t.planState, if (t.missionItem >= 0) "  ·  ítem ${t.missionItem}" else ""))
+            if (t.planError.isNotEmpty()) append(trf("\n⚠ Error plan: %1\$s", t.planError))
+            append(trf("\nCasa        %1\$s", tr(t.navigateHome)))
         }
 
-        checksText.text = if (!t.connected) "Conecta para ver las comprobaciones." else buildString {
-            if (t.components.isEmpty()) append("(el dron aún no ha informado)\n")
+        checksText.text = if (!t.connected) tr("Conecta para ver las comprobaciones.") else buildString {
+            if (t.components.isEmpty()) append(tr("(el dron aún no ha informado)\n"))
             for ((k, v) in t.components) append("${if (v) "✔" else "✘"} $k\n")
-            t.planAvailable?.let { append(if (it) "✔ Plan disponible para iniciar" else "✘ Plan no disponible todavía") }
-            t.magnetoCalibrationRequired?.let { if (it) append("\n✘ Requiere calibrar magnetómetro") }
+            t.planAvailable?.let { append(if (it) tr("✔ Plan disponible para iniciar") else tr("✘ Plan no disponible todavía")) }
+            t.magnetoCalibrationRequired?.let { if (it) append(tr("\n✘ Requiere calibrar magnetómetro")) }
             if (link.platform == Platform.BLUEGRASS_SEQUOIA)
-                append(if (t.sequoiaSeen) "\n✔ Sequoia reconocida por el dron" + (if (t.accessories.isNotEmpty()) " (${t.accessories})" else "")
-                       else "\n✘ El dron no informa de ninguna Sequoia (¿cable? ¿firmware?)")
+                append(if (t.sequoiaSeen) tr("\n✔ Sequoia reconocida por el dron") + (if (t.accessories.isNotEmpty()) " (${t.accessories})" else "")
+                       else tr("\n✘ El dron no informa de ninguna Sequoia (¿cable? ¿firmware?)"))
         }.trimEnd()
 
         if (!t.connected && !link.connecting) planUploaded = false
@@ -1418,7 +1441,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         val nowMs = System.currentTimeMillis()
         if (msg == lastLogMsg && nowMs - lastLogAt < 3000 && !msg.endsWith("✓")) return
         lastLogMsg = msg; lastLogAt = nowMs
-        val ts = SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date())
+        val ts = SimpleDateFormat(tr("HH:mm:ss"), Locale.ROOT).format(Date())
         logLines.addFirst("$ts  $msg")
         while (logLines.size > 200) logLines.removeLast()
         logText.text = logLines.joinToString("\n")

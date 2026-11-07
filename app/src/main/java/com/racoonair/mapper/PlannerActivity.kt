@@ -99,6 +99,7 @@ class PlannerActivity : Activity(), MapView.Listener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        I18n.init(applicationContext)
         setTheme(android.R.style.Theme_Material_NoActionBar)
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -170,9 +171,9 @@ class PlannerActivity : Activity(), MapView.Listener {
             setPadding(dp(12), dp(8), dp(8), dp(4))
         }
         top.addView(TextView(this).apply {
-            text = "Planificar zona"; setTextColor(C_TEXT); textSize = 19f; typeface = Typeface.DEFAULT_BOLD
+            text = tr("Planificar zona"); setTextColor(C_TEXT); textSize = 19f; typeface = Typeface.DEFAULT_BOLD
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        top.addView(button("Cerrar", C_GREY) { finish() })
+        top.addView(button(tr("Cerrar"), C_GREY) { finish() })
         root.addView(top); topBar = top
 
         map = MapView(this)
@@ -183,22 +184,22 @@ class PlannerActivity : Activity(), MapView.Listener {
         root.addView(map, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f))
 
         val tools = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(4), dp(8), 0) }
-        homeBtn = button("Casa…", C_GREY) { toggleHomeMode() }
-        sigpacBtn = button("🌾 Parcela SIGPAC", C_GREY) { toggleSigpacMode() }
+        homeBtn = button(tr("Casa…"), C_GREY) { toggleHomeMode() }
+        sigpacBtn = button(tr("🌾 Parcela SIGPAC"), C_GREY) { toggleSigpacMode() }
         layerBtn = button("", C_GREY) { toggleSigpacLayer() }
         updateLayerBtn()
         airBtn = button("", C_GREY) { toggleAirframe() }
-        tools.addView(row(airBtn, sigpacBtn, layerBtn, button("📥 Offline", C_GREY) { offlineDialog() }))
-        landBtn = button("🛬 Aterrizaje", C_GREY) { toggleLandingMode() }
+        tools.addView(row(airBtn, sigpacBtn, layerBtn, button(tr("📥 Offline"), C_GREY) { offlineDialog() }))
+        landBtn = button(tr("🛬 Aterrizaje"), C_GREY) { toggleLandingMode() }
         val discoRow = row(landBtn,
-            button("🌬 Según viento", C_GREY) { landingFromWind() },
-            button("Aprox…", C_GREY) { approachDialog() },
+            button(tr("🌬 Según viento"), C_GREY) { landingFromWind() },
+            button(tr("Aprox…"), C_GREY) { approachDialog() },
             button("", C_GREY) { toggleDroneCamera() }.also { camBtn = it })
         tools.addView(discoRow); this.discoRow = discoRow
         tools.addView(row(
-            button("↶ Deshacer", C_GREY) { if (zone.isNotEmpty()) { zone.removeAt(zone.size - 1); zoneChanged() } },
-            button("Borrar", C_GREY) { confirmClear() },
-            button("Encuadrar", C_GREY) { recenter() },
+            button(tr("↶ Deshacer"), C_GREY) { if (zone.isNotEmpty()) { zone.removeAt(zone.size - 1); zoneChanged() } },
+            button(tr("Borrar"), C_GREY) { confirmClear() },
+            button(tr("Encuadrar"), C_GREY) { recenter() },
             homeBtn
         ))
         root.addView(tools); toolsBar = tools
@@ -219,14 +220,14 @@ class PlannerActivity : Activity(), MapView.Listener {
                 override fun onNothingSelected(pv: android.widget.AdapterView<*>?) {}
             }
         }
-        panel.addView(TextView(this).apply { text = "Dron y cámara"; setTextColor(C_DIM); textSize = 11f })
+        panel.addView(TextView(this).apply { text = tr("Dron y cámara"); setTextColor(C_DIM); textSize = 11f })
         panel.addView(cameraSpinner)
-        val (a, ea) = field("Altura (m)", fmt(p.altitude)); fAlt = ea
-        val (b, eb) = field("Solape frontal %", fmt(p.frontOverlap * 100)); fFront = eb
-        val (c, ec) = field("Solape lateral %", fmt(p.sideOverlap * 100)); fSide = ec
-        val (d, ed) = field("Velocidad (m/s)", fmt(p.speed)); fSpeed = ed
-        val (e, ee) = field("Rumbo pasadas (°)", p.angleDeg?.let { fmt(it) } ?: "", "auto"); fAngle = ee
-        val (f, ef) = field("Margen extra (m)", fmt(p.overshoot)); fOver = ef
+        val (a, ea) = field(tr("Altura (m)"), fmt(p.altitude)); fAlt = ea
+        val (b, eb) = field(tr("Solape frontal %"), fmt(p.frontOverlap * 100)); fFront = eb
+        val (c, ec) = field(tr("Solape lateral %"), fmt(p.sideOverlap * 100)); fSide = ec
+        val (d, ed) = field(tr("Velocidad (m/s)"), fmt(p.speed)); fSpeed = ed
+        val (e, ee) = field(tr("Rumbo pasadas (°)"), p.angleDeg?.let { fmt(it) } ?: "", "auto"); fAngle = ee
+        val (f, ef) = field(tr("Margen extra (m)"), fmt(p.overshoot)); fOver = ef
         panel.addView(row(a, b, c))
         panel.addView(row(d, e, f))
         homeText = TextView(this).apply { setTextColor(C_DIM); textSize = 12f; setPadding(0, dp(4), 0, 0) }
@@ -238,11 +239,11 @@ class PlannerActivity : Activity(), MapView.Listener {
         }
         panel.addView(stats, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
         panel.addView(row(
-            button("Abrir zona", C_GREY) { openZone() },
-            button("Exportar KML", C_GREY) { exportKml() },
-            button("Guardar", C_BLUE) { saveDialog(useAfter = false) }
+            button(tr("Abrir zona"), C_GREY) { openZone() },
+            button(tr("Exportar KML"), C_GREY) { exportKml() },
+            button(tr("Guardar"), C_BLUE) { saveDialog(useAfter = false) }
         ))
-        panel.addView(row(button("✔  USAR ESTE PLAN", C_GREEN) { saveDialog(useAfter = true) }))
+        panel.addView(row(button(tr("✔  USAR ESTE PLAN"), C_GREEN) { saveDialog(useAfter = true) }))
         panelScroll = ScrollView(this).apply { addView(panel) }
         frame = LinearLayout(this).apply { setBackgroundColor(C_BG) }
         root.removeAllViews()
@@ -266,10 +267,10 @@ class PlannerActivity : Activity(), MapView.Listener {
 
     /** Casa: manual > posición del dron > posición del móvil. */
     private fun homeAndSource(): Pair<LatLon?, String> {
-        Session.manualHome?.let { return Pair(it, "casa fijada a mano en el mapa") }
-        dronePos()?.let { return Pair(it, "casa = posición GPS del dron") }
-        phonePos?.let { return Pair(it, "casa = posición del MÓVIL (aprox.): ponte junto al dron o fíjala con «Casa…»") }
-        return Pair(null, "sin casa: conecta el dron con GPS, activa la ubicación del móvil o fíjala con «Casa…»")
+        Session.manualHome?.let { return Pair(it, tr("casa fijada a mano en el mapa")) }
+        dronePos()?.let { return Pair(it, tr("casa = posición GPS del dron")) }
+        phonePos?.let { return Pair(it, tr("casa = posición del MÓVIL (aprox.): ponte junto al dron o fíjala con «Casa…»")) }
+        return Pair(null, tr("sin casa: conecta el dron con GPS, activa la ubicación del móvil o fíjala con «Casa…»"))
     }
 
     private fun initialView() {
@@ -290,23 +291,23 @@ class PlannerActivity : Activity(), MapView.Listener {
         if (sigpacMode) { querySigpac(p); return }
         if (landStep == 1) {
             Session.fixedWing = Session.fixedWing.copy(landing = p, headingSet = false, elevSet = false, elevDiff = 0.0)
-            landStep = 2; landBtn.text = "Toca DE DÓNDE llega…"
-            Toast.makeText(this, "Ahora toca de dónde llega el avión (lado de la aproximación, ~200 m)", Toast.LENGTH_LONG).show()
+            landStep = 2; landBtn.text = tr("Toca DE DÓNDE llega…")
+            Toast.makeText(this, tr("Ahora toca de dónde llega el avión (lado de la aproximación, ~200 m)"), Toast.LENGTH_LONG).show()
             map.landing = null; recompute(); return
         }
         if (landStep == 2) {
             val ld = Session.fixedWing.landing ?: return
             if (GridPlanner.distance(p, ld) < 50.0) {
-                Toast.makeText(this, "Toca más lejos del punto de toma (a 100–200 m, por donde llegará el avión)", Toast.LENGTH_LONG).show(); return
+                Toast.makeText(this, tr("Toca más lejos del punto de toma (a 100–200 m, por donde llegará el avión)"), Toast.LENGTH_LONG).show(); return
             }
             Session.fixedWing = Session.fixedWing.copy(finalHeading = GridPlanner.bearing(p, ld), headingSet = true)
-            landStep = 0; landBtn.text = "🛬 Aterrizaje"; setBtnColor(landBtn, C_GREY)
-            Toast.makeText(this, "Final rumbo ${GridPlanner.bearing(p, ld).toInt()}°. Revisa el cono azul en la ortofoto.", Toast.LENGTH_LONG).show()
+            landStep = 0; landBtn.text = tr("🛬 Aterrizaje"); setBtnColor(landBtn, C_GREY)
+            Toast.makeText(this, trf("Final rumbo %1\$s°. Revisa el cono azul en la ortofoto.", GridPlanner.bearing(p, ld).toInt()), Toast.LENGTH_LONG).show()
             recompute(); return
         }
         if (settingHome) {
-            Session.manualHome = p; settingHome = false; homeBtn.text = "Casa…"
-            Toast.makeText(this, "Casa fijada aquí", Toast.LENGTH_SHORT).show()
+            Session.manualHome = p; settingHome = false; homeBtn.text = tr("Casa…")
+            Toast.makeText(this, tr("Casa fijada aquí"), Toast.LENGTH_SHORT).show()
             recompute(); return
         }
         zone.add(p); zoneChanged()
@@ -316,7 +317,7 @@ class PlannerActivity : Activity(), MapView.Listener {
         // Pulsación larga cerca de un vértice: lo borra.
         val s = map.toScreen(p)
         val idx = zone.indexOfFirst { val q = map.toScreen(it); Math.hypot((q[0] - s[0]).toDouble(), (q[1] - s[1]).toDouble()) < dp(24) }
-        if (idx >= 0) { zone.removeAt(idx); zoneChanged(); Toast.makeText(this, "Punto ${idx + 1} borrado", Toast.LENGTH_SHORT).show() }
+        if (idx >= 0) { zone.removeAt(idx); zoneChanged(); Toast.makeText(this, trf("Punto %1\$s borrado", idx + 1), Toast.LENGTH_SHORT).show() }
     }
 
     // ---------------------------------------------------------------- SIGPAC
@@ -331,17 +332,17 @@ class PlannerActivity : Activity(), MapView.Listener {
 
     private fun toggleSigpacMode() {
         sigpacMode = !sigpacMode
-        if (sigpacMode) { settingHome = false; homeBtn.text = "Casa…" }
-        sigpacBtn.text = if (sigpacMode) "Toca la parcela…" else "🌾 Parcela SIGPAC"
+        if (sigpacMode) { settingHome = false; homeBtn.text = tr("Casa…") }
+        sigpacBtn.text = if (sigpacMode) tr("Toca la parcela…") else tr("🌾 Parcela SIGPAC")
         setBtnColor(sigpacBtn, if (sigpacMode) C_AMBER else C_GREY)
         if (sigpacMode) {
             if (!map.showSigpac && map.zoom >= MapView.SIGPAC_MIN_Z) { map.showSigpac = true; updateLayerBtn() }
-            Toast.makeText(this, "Toca dentro de la parcela que quieres volar", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Toca dentro de la parcela que quieres volar"), Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun updateLayerBtn() {
-        layerBtn.text = if (map.showSigpac) "Recintos: SÍ" else "Recintos: NO"
+        layerBtn.text = if (map.showSigpac) tr("Recintos: SÍ") else tr("Recintos: NO")
         setBtnColor(layerBtn, if (map.showSigpac) C_BLUE else C_GREY)
     }
 
@@ -349,34 +350,34 @@ class PlannerActivity : Activity(), MapView.Listener {
         map.showSigpac = !map.showSigpac
         prefs.edit().putBoolean("capa_sigpac", map.showSigpac).apply()
         updateLayerBtn()
-        if (map.showSigpac && map.zoom < MapView.SIGPAC_MIN_Z) Toast.makeText(this, "Acércate más para ver los recintos", Toast.LENGTH_SHORT).show()
+        if (map.showSigpac && map.zoom < MapView.SIGPAC_MIN_Z) Toast.makeText(this, tr("Acércate más para ver los recintos"), Toast.LENGTH_SHORT).show()
     }
 
     private fun querySigpac(p: LatLon) {
         if (sigpacBusy) return
         sigpacBusy = true
-        sigpacBtn.text = "Consultando SIGPAC…"
+        sigpacBtn.text = tr("Consultando SIGPAC…")
         Thread {
             val res = try { Result.success(Sigpac.query(p)) } catch (t: Throwable) { Result.failure<List<Sigpac.Recinto>>(t) }
             main.post {
                 sigpacBusy = false
                 if (isFinishing || isDestroyed) return@post
-                sigpacBtn.text = if (sigpacMode) "Toca la parcela…" else "🌾 Parcela SIGPAC"
+                sigpacBtn.text = if (sigpacMode) tr("Toca la parcela…") else tr("🌾 Parcela SIGPAC")
                 res.onFailure {
                     Crumbs.write("sigpac: ${it.javaClass.simpleName}: ${it.message}")
-                    AlertDialog.Builder(this).setTitle("SIGPAC no responde")
-                        .setMessage("No se pudo consultar el recinto (${it.message ?: it.javaClass.simpleName}).\n\n" +
-                            "Hace falta internet (datos móviles vale aunque estés conectado a la WiFi del dron). " +
-                            "Si estás en el campo sin cobertura, dibuja la zona a mano.")
-                        .setPositiveButton("Entendido", null).show()
+                    AlertDialog.Builder(this).setTitle(tr("SIGPAC no responde"))
+                        .setMessage(trf("No se pudo consultar el recinto (%1\$s).\n\n", it.message ?: it.javaClass.simpleName) +
+                            tr("Hace falta internet (datos móviles vale aunque estés conectado a la WiFi del dron). ") +
+                            tr("Si estás en el campo sin cobertura, dibuja la zona a mano."))
+                        .setPositiveButton(tr("Entendido"), null).show()
                 }
                 res.onSuccess { list ->
                     when {
-                        list.isEmpty() -> Toast.makeText(this, "No hay recinto SIGPAC en ese punto", Toast.LENGTH_LONG).show()
+                        list.isEmpty() -> Toast.makeText(this, tr("No hay recinto SIGPAC en ese punto"), Toast.LENGTH_LONG).show()
                         list.size == 1 -> offerRecinto(list[0])
-                        else -> AlertDialog.Builder(this).setTitle("Varios recintos en ese punto")
+                        else -> AlertDialog.Builder(this).setTitle(tr("Varios recintos en ese punto"))
                             .setItems(list.map { it.nombre + " · " + (Sigpac.USOS[it.uso] ?: it.uso) }.toTypedArray()) { _, i -> offerRecinto(list[i]) }
-                            .setNegativeButton("Cancelar", null).show()
+                            .setNegativeButton(tr("Cancelar"), null).show()
                     }
                 }
             }
@@ -389,18 +390,18 @@ class PlannerActivity : Activity(), MapView.Listener {
         val simple = sim.points
         val notes = buildString {
             append(r.descripcion())
-            append("\n\nContorno: ${r.contorno.size} vértices → ${simple.size} para el plan" +
-                (if (sim.tolM > 0) " (se aparta del lindero como mucho ${"%.1f".format(sim.tolM)} m)." else " (sin simplificar)."))
-            if (r.huecos > 0) append("\n⚠ El recinto tiene ${r.huecos} hueco(s) interior(es): se volarán igualmente.")
-            if ((r.pendiente ?: 0.0) > 10) append("\n⚠ Pendiente media ${"%.0f".format(r.pendiente)} %: la altura sobre el suelo variará a lo largo de las pasadas.")
-            if (zone.isNotEmpty()) append("\n\nSustituirá la zona dibujada ahora.")
+            append(trf("\n\nContorno: %1\$s vértices → %2\$s para el plan", r.contorno.size, simple.size) +
+                (if (sim.tolM > 0) trf(" (se aparta del lindero como mucho %1\$s m).", "%.1f".format(sim.tolM)) else tr(" (sin simplificar).")))
+            if (r.huecos > 0) append(trf("\n⚠ El recinto tiene %1\$s hueco(s) interior(es): se volarán igualmente.", r.huecos))
+            if ((r.pendiente ?: 0.0) > 10) append(trf("\n⚠ Pendiente media %1\$s %%: la altura sobre el suelo variará a lo largo de las pasadas.", "%.0f".format(r.pendiente)))
+            if (zone.isNotEmpty()) append(tr("\n\nSustituirá la zona dibujada ahora."))
         }
-        AlertDialog.Builder(this).setTitle("Recinto SIGPAC")
+        AlertDialog.Builder(this).setTitle(tr("Recinto SIGPAC"))
             .setMessage(notes)
-            .setNegativeButton("Cancelar") { _, _ -> map.highlight = emptyList() }
-            .setPositiveButton("Usar como zona") { _, _ ->
+            .setNegativeButton(tr("Cancelar")) { _, _ -> map.highlight = emptyList() }
+            .setPositiveButton(tr("Usar como zona")) { _, _ ->
                 zone.clear(); zone.addAll(simple); clearLanding()
-                Session.zoneName = "SIGPAC ${r.provincia}-${r.municipio}-${r.poligono}-${r.parcela}-${r.recinto}"
+                Session.zoneName = trf("SIGPAC %1\$s-%2\$s-%3\$s-%4\$s-%5\$s", r.provincia, r.municipio, r.poligono, r.parcela, r.recinto)
                 if (sigpacMode) toggleSigpacMode()
                 zoneChanged(); recenter()
                 Crumbs.write("sigpac: recinto ${r.codigo} (${simple.size} vértices)")
@@ -412,73 +413,73 @@ class PlannerActivity : Activity(), MapView.Listener {
     private fun offlineDialog() {
         val mb = MapView.cacheSizeMb(filesDir)
         val items = arrayOf(
-            "📥 Descargar la zona que se ve ahora",
-            "Ortofoto: ${if (map.base == TileLayer.PNOA) "PNOA (IGN) ✓ · cambiar a Esri" else "Esri ✓ · cambiar a PNOA (IGN)"}",
-            "🗑 Borrar mapas guardados (${"%.0f".format(mb)} MB)"
+            tr("📥 Descargar la zona que se ve ahora"),
+            trf("Ortofoto: %1\$s", if (map.base == TileLayer.PNOA) "PNOA (IGN) ✓ · cambiar a Esri" else "Esri ✓ · cambiar a PNOA (IGN)"),
+            trf("🗑 Borrar mapas guardados (%1\$s MB)", "%.0f".format(mb))
         )
-        AlertDialog.Builder(this).setTitle("Mapas sin conexión").setItems(items) { _, w ->
+        AlertDialog.Builder(this).setTitle(tr("Mapas sin conexión")).setItems(items) { _, w ->
             when (w) {
                 0 -> askDownload()
                 1 -> {
                     map.base = if (map.base == TileLayer.PNOA) TileLayer.ESRI else TileLayer.PNOA
                     prefs.edit().putString("capa_base", map.base.name).apply()
                 }
-                2 -> AlertDialog.Builder(this).setMessage("¿Borrar todos los mapas guardados en el móvil?")
-                    .setNegativeButton("No", null).setPositiveButton("Borrar") { _, _ ->
-                        MapView.clearCache(filesDir); map.retryFailed(); Toast.makeText(this, "Mapas borrados", Toast.LENGTH_SHORT).show()
+                2 -> AlertDialog.Builder(this).setMessage(tr("¿Borrar todos los mapas guardados en el móvil?"))
+                    .setNegativeButton(tr("No"), null).setPositiveButton(tr("Borrar")) { _, _ ->
+                        MapView.clearCache(filesDir); map.retryFailed(); Toast.makeText(this, tr("Mapas borrados"), Toast.LENGTH_SHORT).show()
                     }.show()
             }
-        }.setNegativeButton("Cerrar", null).show()
+        }.setNegativeButton(tr("Cerrar"), null).show()
     }
 
     private fun askDownload() {
         if (map.base != TileLayer.PNOA) {
-            AlertDialog.Builder(this).setMessage("La descarga para usar sin conexión se hace con la ortofoto PNOA del IGN " +
-                "(licencia libre). Cambia la ortofoto a PNOA en este mismo menú.").setPositiveButton("Entendido", null).show()
+            AlertDialog.Builder(this).setMessage(tr("La descarga para usar sin conexión se hace con la ortofoto PNOA del IGN ") +
+                tr("(licencia libre). Cambia la ortofoto a PNOA en este mismo menú.")).setPositiveButton(tr("Entendido"), null).show()
             return
         }
         if (map.zoom < 13) {
-            AlertDialog.Builder(this).setMessage("Acércate a la parcela (la zona visible debe ser de unos pocos km) y vuelve a intentarlo.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setMessage(tr("Acércate a la parcela (la zona visible debe ser de unos pocos km) y vuelve a intentarlo."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         val b = map.visibleBounds()
         val zMin = 12
         var zMax = 19
         val maxTiles = 6000L
         while (zMax > 15 && MapView.countTiles(b[0], b[1], b[2], b[3], zMin, zMax) > maxTiles) zMax--
-        val withSigpac = android.widget.CheckBox(this).apply { text = "Incluir recintos SIGPAC (≈${MapView.countTiles(b[0], b[1], b[2], b[3], MapView.SIGPAC_MIN_Z, minOf(zMax, MapView.SIGPAC_MAX_Z))} teselas más)"; isChecked = true; setTextColor(C_TEXT) }
+        val withSigpac = android.widget.CheckBox(this).apply { text = trf("Incluir recintos SIGPAC (≈%1\$s teselas más)", MapView.countTiles(b[0], b[1], b[2], b[3], MapView.SIGPAC_MIN_Z, minOf(zMax, MapView.SIGPAC_MAX_Z))); isChecked = true; setTextColor(C_TEXT) }
         val layers = { if (withSigpac.isChecked) listOf(TileLayer.PNOA, TileLayer.SIGPAC) else listOf(TileLayer.PNOA) }
         val n = MapView.countTiles(b[0], b[1], b[2], b[3], zMin, zMax)
         if (n > maxTiles) {
-            AlertDialog.Builder(this).setMessage("La zona visible es demasiado grande. Acércate a la parcela y vuelve a intentarlo.")
-                .setPositiveButton("Entendido", null).show(); return
+            AlertDialog.Builder(this).setMessage(tr("La zona visible es demasiado grande. Acércate a la parcela y vuelve a intentarlo."))
+                .setPositiveButton(tr("Entendido"), null).show(); return
         }
         val w = GridPlanner.distance(LatLon(b[0], b[2]), LatLon(b[0], b[3])); val h = GridPlanner.distance(LatLon(b[0], b[2]), LatLon(b[1], b[2]))
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         box.addView(TextView(this).apply {
             setTextColor(C_TEXT); textSize = 14f
-            text = "Zona ${"%.1f × %.1f".format(w / 1000, h / 1000)} km, zoom $zMin–$zMax${if (zMax < 19) " (máximo detalle recortado: acércate más para el detalle completo)" else ""}.\n" +
-                "≈$n teselas de ortofoto, ≈${"%.0f".format(n * 0.03)} MB.\n\nHace falta internet ahora; después se verá sin cobertura."
+            text = trf("Zona %1\$s km, zoom %2\$s–%3\$s%4\$s.\n", "%.1f × %.1f".format(w / 1000, h / 1000), zMin, zMax, if (zMax < 19) " (máximo detalle recortado: acércate más para el detalle completo)" else "") +
+                trf("≈%1\$s teselas de ortofoto, ≈%2\$s MB.\n\nHace falta internet ahora; después se verá sin cobertura.", n, "%.0f".format(n * 0.03))
         })
         box.addView(withSigpac)
-        AlertDialog.Builder(this).setTitle("Descargar mapa").setView(box)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Descargar") { _, _ -> runDownload(b, zMin, zMax, layers()) }.show()
+        AlertDialog.Builder(this).setTitle(tr("Descargar mapa")).setView(box)
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Descargar")) { _, _ -> runDownload(b, zMin, zMax, layers()) }.show()
     }
 
     private var downloadCancel: java.util.concurrent.atomic.AtomicBoolean? = null
 
     private fun runDownload(b: DoubleArray, zMin: Int, zMax: Int, layers: List<TileLayer>) {
-        val txt = TextView(this).apply { setTextColor(C_TEXT); textSize = 15f; setPadding(dp(20), dp(16), dp(20), dp(8)); text = "Preparando…" }
+        val txt = TextView(this).apply { setTextColor(C_TEXT); textSize = 15f; setPadding(dp(20), dp(16), dp(20), dp(8)); text = tr("Preparando…") }
         val cancel = java.util.concurrent.atomic.AtomicBoolean(false)
         downloadCancel = cancel
-        val dlg = AlertDialog.Builder(this).setTitle("Descargando mapa").setView(txt).setCancelable(false)
-            .setNegativeButton("Cancelar") { _, _ -> cancel.set(true) }.show()
+        val dlg = AlertDialog.Builder(this).setTitle(tr("Descargando mapa")).setView(txt).setCancelable(false)
+            .setNegativeButton(tr("Cancelar")) { _, _ -> cancel.set(true) }.show()
         Thread {
             var last = 0L
             val (ok, fail) = MapView.download(filesDir, layers, b[0], b[1], b[2], b[3], zMin, zMax) { d, t, f ->
                 val now = System.currentTimeMillis()
-                if (now - last > 300 || d == t) { last = now; main.post { txt.text = "$d / $t teselas${if (f > 0) " · $f fallidas" else ""}" } }
+                if (now - last > 300 || d == t) { last = now; main.post { txt.text = trf("%1\$s / %2\$s teselas%3\$s", d, t, if (f > 0) " · $f fallidas" else "") } }
                 !cancel.get()
             }
             main.post {
@@ -486,9 +487,9 @@ class PlannerActivity : Activity(), MapView.Listener {
                 if (isFinishing || isDestroyed) return@post
                 map.retryFailed()
                 Crumbs.write("offline: ok=$ok fallidas=$fail z$zMin-$zMax")
-                AlertDialog.Builder(this).setTitle(if (cancel.get()) "Descarga cancelada" else "Mapa guardado")
-                    .setMessage("$ok teselas guardadas" + (if (fail > 0) ", $fail fallidas (sin conexión o fuera de cobertura PNOA). Puedes repetir la descarga: solo pide lo que falta." else ".") +
-                        "\n\nEn el campo, sin cobertura, el mapa de esta zona se verá igual.")
+                AlertDialog.Builder(this).setTitle(if (cancel.get()) tr("Descarga cancelada") else tr("Mapa guardado"))
+                    .setMessage(trf("%1\$s teselas guardadas", ok) + (if (fail > 0) trf(", %1\$s fallidas (sin conexión o fuera de cobertura PNOA). Puedes repetir la descarga: solo pide lo que falta.", fail) else ".") +
+                        tr("\n\nEn el campo, sin cobertura, el mapa de esta zona se verá igual."))
                     .setPositiveButton("OK", null).show()
             }
         }.start()
@@ -498,18 +499,18 @@ class PlannerActivity : Activity(), MapView.Listener {
 
     /** Viento previsto respecto a la final: aviso de viento cruzado o de cola. */
     private fun windWarning(f: FixedWing): String? {
-        val r = Session.weather ?: return "Sin previsión de viento: pulsa «🌬 Según viento» para orientar la final."
+        val r = Session.weather ?: return tr("Sin previsión de viento: pulsa «🌬 Según viento» para orientar la final.")
         val ld = f.landing ?: return null
         if (System.currentTimeMillis() - r.fetchedAt > 3 * 3600_000L || GridPlanner.distance(ld, LatLon(r.lat, r.lon)) > 5000)
-            return "Previsión de viento antigua o de otro sitio: vuelve a consultarla («🌬 Según viento») el día del vuelo."
+            return tr("Previsión de viento antigua o de otro sitio: vuelve a consultarla («🌬 Según viento») el día del vuelo.")
         val now = System.currentTimeMillis() / 1000
-        val h = r.hours.lastOrNull { it.epochS <= now }?.takeIf { now - it.epochS < 2 * 3600 } ?: return "Previsión sin la hora actual: vuelve a consultarla."
+        val h = r.hours.lastOrNull { it.epochS <= now }?.takeIf { now - it.epochS < 2 * 3600 } ?: return tr("Previsión sin la hora actual: vuelve a consultarla.")
         if (h.dir10.isNaN() || h.wind10.isNaN()) return null
         val diff = GridPlanner.angleDiff(f.finalHeading, h.dir10)
         val head = h.wind10 * Math.cos(Math.toRadians(diff)); val cross = h.wind10 * Math.sin(Math.toRadians(diff))
         return when {
-            head < -1.0 -> "⛔ VIENTO DE COLA en la final (${"%.1f".format(-head)} m/s): aterrizaría demasiado rápida. Usa «🌬 Según viento»."
-            cross > 4.0 -> "Viento cruzado de ${"%.1f".format(cross)} m/s en la final: orienta la toma más de cara al viento."
+            head < -1.0 -> trf("⛔ VIENTO DE COLA en la final (%1\$s m/s): aterrizaría demasiado rápida. Usa «🌬 Según viento».", "%.1f".format(-head))
+            cross > 4.0 -> trf("Viento cruzado de %1\$s m/s en la final: orienta la toma más de cara al viento.", "%.1f".format(cross))
             else -> null
         }
     }
@@ -524,11 +525,11 @@ class PlannerActivity : Activity(), MapView.Listener {
     private val isDisco get() = prefs.getString("airframe", "BLUEGRASS") == "DISCO"
 
     private fun updateAirframeUi() {
-        airBtn.text = if (isDisco) "✈ Disco" else "✚ Bluegrass"
+        airBtn.text = if (isDisco) tr("✈ Disco") else tr("✚ Bluegrass")
         setBtnColor(airBtn, if (isDisco) C_AMBER else C_BLUE)
         discoRow.visibility = if (isDisco) View.VISIBLE else View.GONE
-        camBtn.text = if (Session.fixedWing.droneCamera) "📷 Dron" else "📷 Libre"
-        homeBtn.text = if (isDisco) "Lanzam.…" else "Casa…"
+        camBtn.text = if (Session.fixedWing.droneCamera) tr("📷 Dron") else tr("📷 Libre")
+        homeBtn.text = if (isDisco) tr("Lanzam.…") else tr("Casa…")
         fSpeed.isEnabled = !isDisco
     }
 
@@ -539,45 +540,45 @@ class PlannerActivity : Activity(), MapView.Listener {
         if (next == "DISCO") {
             fOver.setText(fmt(maxOf(num(fOver) ?: 0.0, FixedWing.RUN_IN)))
             if ((num(fAlt) ?: 0.0) < FixedWing.MIN_ALT) fAlt.setText(fmt(100.0))
-            Toast.makeText(this, "Modo Disco: pasadas de ala fija y aterrizaje planificado", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Modo Disco: pasadas de ala fija y aterrizaje planificado"), Toast.LENGTH_SHORT).show()
         }
         updateAirframeUi(); recompute()
     }
 
     private fun clearLanding() {
         Session.fixedWing = FixedWing(droneCamera = Session.fixedWing.droneCamera, approachDist = Session.fixedWing.approachDist, approachAlt = Session.fixedWing.approachAlt)
-        landStep = 0; if (::landBtn.isInitialized) { landBtn.text = "🛬 Aterrizaje"; setBtnColor(landBtn, C_GREY) }
+        landStep = 0; if (::landBtn.isInitialized) { landBtn.text = tr("🛬 Aterrizaje"); setBtnColor(landBtn, C_GREY) }
     }
 
     private fun toggleLandingMode() {
-        if (landStep != 0) { landStep = 0; landBtn.text = "🛬 Aterrizaje"; setBtnColor(landBtn, C_GREY); return }
+        if (landStep != 0) { landStep = 0; landBtn.text = tr("🛬 Aterrizaje"); setBtnColor(landBtn, C_GREY); return }
         sigpacMode = false; settingHome = false
-        landStep = 1; landBtn.text = "Toca el punto de TOMA…"; setBtnColor(landBtn, C_AMBER)
-        Toast.makeText(this, "Toca dónde quieres que toque tierra la Disco (zona despejada)", Toast.LENGTH_LONG).show()
+        landStep = 1; landBtn.text = tr("Toca el punto de TOMA…"); setBtnColor(landBtn, C_AMBER)
+        Toast.makeText(this, tr("Toca dónde quieres que toque tierra la Disco (zona despejada)"), Toast.LENGTH_LONG).show()
     }
 
     /** Final de cara al viento: el avión vuela HACIA donde viene el viento. */
     private fun landingFromWind() {
         val ld = Session.fixedWing.landing ?: zone.takeIf { it.isNotEmpty() }?.let { z -> LatLon(z.map { it.lat }.average(), z.map { it.lon }.average()) }
-        if (ld == null) { Toast.makeText(this, "Fija antes el punto de toma (🛬)", Toast.LENGTH_SHORT).show(); return }
+        if (ld == null) { Toast.makeText(this, tr("Fija antes el punto de toma (🛬)"), Toast.LENGTH_SHORT).show(); return }
         val cached = Session.weather
         fun apply(r: Weather.Report) {
             val now = System.currentTimeMillis() / 1000
             val h = r.hours.lastOrNull { it.epochS <= now } ?: r.hours.firstOrNull()
-            if (h == null || h.dir10.isNaN()) { Toast.makeText(this, "La previsión no trae dirección del viento", Toast.LENGTH_LONG).show(); return }
-            if (Session.fixedWing.landing == null) { Toast.makeText(this, "Fija antes el punto de toma (🛬)", Toast.LENGTH_SHORT).show(); return }
+            if (h == null || h.dir10.isNaN()) { Toast.makeText(this, tr("La previsión no trae dirección del viento"), Toast.LENGTH_LONG).show(); return }
+            if (Session.fixedWing.landing == null) { Toast.makeText(this, tr("Fija antes el punto de toma (🛬)"), Toast.LENGTH_SHORT).show(); return }
             Session.fixedWing = Session.fixedWing.copy(finalHeading = h.dir10, headingSet = true)
-            Toast.makeText(this, "Final de cara al viento: rumbo ${h.dir10.toInt()}° (viento del ${Weather.rumbo(h.dir10)}, ${"%.1f".format(h.wind10)} m/s)", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, trf("Final de cara al viento: rumbo %1\$s° (viento del %2\$s, %3\$s m/s)", h.dir10.toInt(), Weather.rumbo(h.dir10), "%.1f".format(h.wind10)), Toast.LENGTH_LONG).show()
             recompute()
         }
         if (cached != null && System.currentTimeMillis() - cached.fetchedAt < 60 * 60_000 &&
             GridPlanner.distance(ld, LatLon(cached.lat, cached.lon)) < 5000) { apply(cached); return }
-        Toast.makeText(this, "Consultando el viento…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Consultando el viento…"), Toast.LENGTH_SHORT).show()
         Thread {
             val r = try { Weather.fetch(ld.lat, ld.lon) } catch (t: Throwable) { null }
             main.post {
                 if (isFinishing || isDestroyed) return@post
-                if (r == null) Toast.makeText(this, "Sin internet: no se pudo consultar el viento", Toast.LENGTH_LONG).show()
+                if (r == null) Toast.makeText(this, tr("Sin internet: no se pudo consultar el viento"), Toast.LENGTH_LONG).show()
                 else { Session.weather = r; apply(r) }
             }
         }.start()
@@ -586,19 +587,19 @@ class PlannerActivity : Activity(), MapView.Listener {
     private fun approachDialog() {
         val f = Session.fixedWing
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
-        val (v1, e1) = field("Distancia de aproximación (m)", fmt(f.approachDist))
-        val (v2, e2) = field("Altura de aproximación (m)", fmt(f.approachAlt))
-        val (v3, e3) = field("Desnivel toma − lanzamiento (m)", fmt(f.elevDiff), "0 si es llano")
+        val (v1, e1) = field(tr("Distancia de aproximación (m)"), fmt(f.approachDist))
+        val (v2, e2) = field(tr("Altura de aproximación (m)"), fmt(f.approachAlt))
+        val (v3, e3) = field(tr("Desnivel toma − lanzamiento (m)"), fmt(f.elevDiff), tr("0 si es llano"))
         box.addView(v1); box.addView(v2); box.addView(v3)
         box.addView(TextView(this).apply {
             setTextColor(C_DIM); textSize = 12f
-            text = "La Disco llega al punto de aproximación a esa altura y baja en línea recta hasta el punto de toma. " +
-                "Manual Parrot: unos 200 m de pasillo libre en un cono de 30°. " +
-                "Desnivel: cuánto más alta (+) o más baja (−) está la toma que el sitio de lanzamiento; las alturas del plan son relativas al lanzamiento."
+            text = tr("La Disco llega al punto de aproximación a esa altura y baja en línea recta hasta el punto de toma. ") +
+                tr("Manual Parrot: unos 200 m de pasillo libre en un cono de 30°. ") +
+                tr("Desnivel: cuánto más alta (+) o más baja (−) está la toma que el sitio de lanzamiento; las alturas del plan son relativas al lanzamiento.")
         })
-        AlertDialog.Builder(this).setTitle("Aproximación").setView(box)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Aplicar") { _, _ ->
+        AlertDialog.Builder(this).setTitle(tr("Aproximación")).setView(box)
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Aplicar")) { _, _ ->
                 val d = num(e1); val a = num(e2); val el = num(e3) ?: 0.0
                 if (d != null && a != null && d.isFinite() && a.isFinite() && el.isFinite())
                     Session.fixedWing = Session.fixedWing.copy(approachDist = d.coerceIn(120.0, 400.0), approachAlt = a.coerceIn(15.0, 60.0),
@@ -609,28 +610,28 @@ class PlannerActivity : Activity(), MapView.Listener {
 
     private fun toggleDroneCamera() {
         val on = !Session.fixedWing.droneCamera
-        if (on) AlertDialog.Builder(this).setTitle("¿La Disco gobierna la Sequoia?")
-            .setMessage("Solo en una Disco-Pro AG con la función Sequoia activa. En una Disco FPV la Sequoia va por libre: " +
-                "déjalo en «Libre» y prepárala por WiFi antes de lanzar.")
-            .setNegativeButton("No, por libre", null)
-            .setPositiveButton("Sí, Pro AG") { _, _ ->
+        if (on) AlertDialog.Builder(this).setTitle(tr("¿La Disco gobierna la Sequoia?"))
+            .setMessage(tr("Solo en una Disco-Pro AG con la función Sequoia activa. En una Disco FPV la Sequoia va por libre: ") +
+                tr("déjalo en «Libre» y prepárala por WiFi antes de lanzar."))
+            .setNegativeButton(tr("No, por libre"), null)
+            .setPositiveButton(tr("Sí, Pro AG")) { _, _ ->
                 Session.fixedWing = Session.fixedWing.copy(droneCamera = true); updateAirframeUi(); recompute()
             }.show()
         else { Session.fixedWing = Session.fixedWing.copy(droneCamera = false); updateAirframeUi(); recompute() }
     }
 
     private fun toggleHomeMode() {
-        val items = arrayOf("Tocar en el mapa para fijar la casa", "Usar posición del dron / móvil (automático)")
-        AlertDialog.Builder(this).setTitle("Punto de despegue y aterrizaje").setItems(items) { _, w ->
-            if (w == 0) { settingHome = true; homeBtn.text = "Toca el mapa…" }
-            else { Session.manualHome = null; settingHome = false; homeBtn.text = "Casa…"; recompute() }
+        val items = arrayOf(tr("Tocar en el mapa para fijar la casa"), tr("Usar posición del dron / móvil (automático)"))
+        AlertDialog.Builder(this).setTitle(tr("Punto de despegue y aterrizaje")).setItems(items) { _, w ->
+            if (w == 0) { settingHome = true; homeBtn.text = tr("Toca el mapa…") }
+            else { Session.manualHome = null; settingHome = false; homeBtn.text = tr("Casa…"); recompute() }
         }.show()
     }
 
     private fun confirmClear() {
         if (zone.isEmpty()) return
-        AlertDialog.Builder(this).setMessage("¿Borrar todos los puntos de la zona?")
-            .setNegativeButton("No", null).setPositiveButton("Borrar") { _, _ -> zone.clear(); clearLanding(); zoneChanged() }.show()
+        AlertDialog.Builder(this).setMessage(tr("¿Borrar todos los puntos de la zona?"))
+            .setNegativeButton(tr("No"), null).setPositiveButton(tr("Borrar")) { _, _ -> zone.clear(); clearLanding(); zoneChanged() }.show()
     }
 
     private fun zoneChanged() {
@@ -667,15 +668,15 @@ class PlannerActivity : Activity(), MapView.Listener {
         map.landing = if (isDisco && Session.fixedWing.landing != null && landStep != 1) Session.fixedWing else null
         result = null
         val p = readParams()
-        if (p == null) { stats.text = "Revisa los parámetros (números)."; map.passes = emptyList(); return }
+        if (p == null) { stats.text = tr("Revisa los parámetros (números)."); map.passes = emptyList(); return }
         Session.params = p
         if (zone.size < 3) {
-            stats.text = "Toca el mapa para marcar las esquinas de la parcela (mínimo 3).\n" +
-                "Pulsación larga sobre un punto = borrarlo. Doble toque = acercar.\n\n" +
-                "Huella Sequoia a ${fmt(p.altitude)} m: ${"%.0f × %.0f".format(p.camera.footprint(p.altitude).first, p.camera.footprint(p.altitude).second)} m · GSD ${"%.1f".format(p.camera.gsdCm(p.altitude))} cm/px"
+            stats.text = tr("Toca el mapa para marcar las esquinas de la parcela (mínimo 3).\n") +
+                tr("Pulsación larga sobre un punto = borrarlo. Doble toque = acercar.\n\n") +
+                trf("Huella Sequoia a %1\$s m: %2\$s m · GSD %3\$s cm/px", fmt(p.altitude), "%.0f × %.0f".format(p.camera.footprint(p.altitude).first, p.camera.footprint(p.altitude).second), "%.1f".format(p.camera.gsdCm(p.altitude)))
             map.passes = emptyList(); return
         }
-        if (home == null) { stats.text = if (isDisco) "Falta el punto de lanzamiento (botón «Lanzam.»)." else "Falta la casa (punto de despegue/aterrizaje)."; map.passes = emptyList(); return }
+        if (home == null) { stats.text = if (isDisco) tr("Falta el punto de lanzamiento (botón «Lanzam.»).") else tr("Falta la casa (punto de despegue/aterrizaje)."); map.passes = emptyList(); return }
         try {
             val r = GridPlanner.plan(zone, home, p)
             result = r
@@ -686,7 +687,7 @@ class PlannerActivity : Activity(), MapView.Listener {
             stats.text = r.summary() + (if (bl.isEmpty()) "" else "\n⛔ " + bl.joinToString("\n⛔ ")) +
                 (if (w.isEmpty()) "" else "\n⚠ " + w.joinToString("\n⚠ "))
         } catch (e: Exception) {
-            stats.text = "No se puede generar: ${e.message}"
+            stats.text = trf("No se puede generar: %1\$s", e.message)
             map.passes = emptyList()
         }
     }
@@ -695,16 +696,16 @@ class PlannerActivity : Activity(), MapView.Listener {
 
     private fun saveDialog(useAfter: Boolean) {
         val r = result
-        if (r == null) { Toast.makeText(this, "Primero dibuja una zona válida", Toast.LENGTH_SHORT).show(); return }
-        if (landStep != 0) { Toast.makeText(this, "Termina de fijar el aterrizaje (🛬) antes de usar el plan", Toast.LENGTH_LONG).show(); return }
-        (blockersShown.firstOrNull() ?: r.blockers().firstOrNull())?.let { Toast.makeText(this, "No se puede usar: $it", Toast.LENGTH_LONG).show(); return }
-        val suggested = Session.zoneName.ifEmpty { "Zona " + SimpleDateFormat("dd-MM HH.mm", Locale.ROOT).format(Date()) }
+        if (r == null) { Toast.makeText(this, tr("Primero dibuja una zona válida"), Toast.LENGTH_SHORT).show(); return }
+        if (landStep != 0) { Toast.makeText(this, tr("Termina de fijar el aterrizaje (🛬) antes de usar el plan"), Toast.LENGTH_LONG).show(); return }
+        (blockersShown.firstOrNull() ?: r.blockers().firstOrNull())?.let { Toast.makeText(this, trf("No se puede usar: %1\$s", it), Toast.LENGTH_LONG).show(); return }
+        val suggested = Session.zoneName.ifEmpty { tr("Zona ") + SimpleDateFormat(tr("dd-MM HH.mm"), Locale.ROOT).format(Date()) }
         val input = EditText(this).apply { setText(suggested); setSelectAllOnFocus(true) }
         AlertDialog.Builder(this)
-            .setTitle(if (useAfter) "Nombre del plan" else "Guardar zona y plan")
+            .setTitle(if (useAfter) tr("Nombre del plan") else tr("Guardar zona y plan"))
             .setView(input)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton(if (useAfter) "Usar" else "Guardar") { _, _ ->
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(if (useAfter) tr("Usar") else tr("Guardar")) { _, _ ->
                 val name = input.text.toString().ifBlank { suggested }
                 try {
                     val txt = r.toMavlink()
@@ -716,33 +717,33 @@ class PlannerActivity : Activity(), MapView.Listener {
                         Session.setPlan(plan, f.name)
                         Session.plannerEstimateS = r.estimatedSeconds
                         Session.plannerTriggerM = r.triggerDistance
-                        Toast.makeText(this, "Plan listo: súbelo al dron", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, tr("Plan listo: súbelo al dron"), Toast.LENGTH_LONG).show()
                         finish()
-                    } else Toast.makeText(this, "Guardado en ${f.parentFile?.name}/${f.name}", Toast.LENGTH_SHORT).show()
+                    } else Toast.makeText(this, trf("Guardado en %1\$s/%2\$s", f.parentFile?.name, f.name), Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Error al guardar: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, trf("Error al guardar: %1\$s", e.message), Toast.LENGTH_LONG).show()
                 }
             }.show()
     }
 
     private fun exportKml() {
-        if (zone.size < 3) { Toast.makeText(this, "Dibuja primero la zona", Toast.LENGTH_SHORT).show(); return }
+        if (zone.size < 3) { Toast.makeText(this, tr("Dibuja primero la zona"), Toast.LENGTH_SHORT).show(); return }
         val name = Session.zoneName.ifEmpty { "zona" }
-        val d = KmlExport.Doc("Racoon AgroMapper · $name").polygon("Zona $name", zone)
+        val d = KmlExport.Doc(trf("Racoon AgroMapper · %1\$s", name)).polygon(trf("Zona %1\$s", name), zone)
         result?.let { r ->
             val route = ArrayList<LatLon>(); route.add(r.home)
             r.passes.forEach { route.add(it.first); route.add(it.second) }
             route.add(r.home)
-            d.line("Pasadas (${r.passes.size})", route, "plan", r.params.altitude)
-            d.point("Casa", r.home, "casa")
+            d.line(trf("Pasadas (%1\$s)", r.passes.size), route, "plan", r.params.altitude)
+            d.point(tr("Casa"), r.home, "casa")
         }
         KmlExport.saveAndShare(this, name, d.build())
     }
 
     private fun openZone() {
         val files = PlanStore.zones(this)
-        if (files.isEmpty()) { Toast.makeText(this, "No hay zonas guardadas", Toast.LENGTH_SHORT).show(); return }
-        AlertDialog.Builder(this).setTitle("Zonas guardadas")
+        if (files.isEmpty()) { Toast.makeText(this, tr("No hay zonas guardadas"), Toast.LENGTH_SHORT).show(); return }
+        AlertDialog.Builder(this).setTitle(tr("Zonas guardadas"))
             .setItems(files.map { it.name.removeSuffix(".zona.json") }.toTypedArray()) { _, i ->
                 try {
                     val z = PlanStore.loadZone(files[i])
@@ -754,7 +755,7 @@ class PlannerActivity : Activity(), MapView.Listener {
                     fSide.setText(fmt(z.params.sideOverlap * 100)); fSpeed.setText(fmt(z.params.speed))
                     fAngle.setText(z.params.angleDeg?.let { fmt(it) } ?: ""); fOver.setText(fmt(z.params.overshoot))
                     zoneChanged(); recenter()
-                } catch (e: Exception) { Toast.makeText(this, "No se pudo abrir: ${e.message}", Toast.LENGTH_LONG).show() }
+                } catch (e: Exception) { Toast.makeText(this, trf("No se pudo abrir: %1\$s", e.message), Toast.LENGTH_LONG).show() }
             }.show()
     }
 

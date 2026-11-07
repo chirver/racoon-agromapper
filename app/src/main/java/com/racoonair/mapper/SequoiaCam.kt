@@ -55,7 +55,7 @@ object SequoiaCam {
             var done = false
             val c = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(n: Network) { if (!done) { done = true; network = n; ok(n) } }
-                override fun onUnavailable() { if (!done) { done = true; fail("no se encontró la WiFi de la Sequoia (o se canceló)") } }
+                override fun onUnavailable() { if (!done) { done = true; fail(tr("no se encontró la WiFi de la Sequoia (o se canceló)")) } }
             }
             cb = c
             try { cm.requestNetwork(req, c, 60_000) } catch (t: Throwable) { done = true; fail(t.message ?: t.javaClass.simpleName) }
@@ -87,7 +87,8 @@ object SequoiaCam {
         fun get(path: String) = http("GET", path)
         fun post(body: JSONObject) = http("POST", "/config", body)
 
-        data class Report(val ok: Boolean, val lines: List<String>)
+        /** [state]: «armed» = captura en marcha, «stopped» = parada, «» = sin cambio. */
+        data class Report(val ok: Boolean, val lines: List<String>, val state: String = "")
 
         /**
          * Bloqueante. Deja la Sequoia capturando con 5 cámaras:
@@ -99,22 +100,22 @@ object SequoiaCam {
             fun line(s: String) { l.add(s); Crumbs.write("sequoia: $s") }
             try {
                 get("/status")
-                line("✔ Sequoia responde ($IP)")
-            } catch (t: Throwable) { line("✘ La Sequoia no responde: ${t.message}"); return Report(false, l) }
+                line(trf("✔ Sequoia responde (%1\$s)", IP))
+            } catch (t: Throwable) { line(trf("✘ La Sequoia no responde: %1\$s", t.message)); return Report(false, l) }
             try {
-                if (get("/capture").optString("capture") == "running") { get("/capture/stop"); line("· Estaba capturando: parada para reconfigurar"); Thread.sleep(800) }
+                if (get("/capture").optString("capture") == "running") { get("/capture/stop"); line(tr("· Estaba capturando: parada para reconfigurar")); Thread.sleep(800) }
             } catch (_: Throwable) {}
             try {
                 val s = get("/storage")
                 val sd = s.optJSONObject("sd")
                 if (sd != null && sd.optString("read_only") == "no" && sd.optString("corrupted") == "no")
-                    line("✔ Tarjeta SD: ${"%.1f".format(sd.optDouble("free") / 1073741824.0)} GB libres")
-                else if (sd != null) line("⚠ Tarjeta SD de solo lectura o dañada: guardará en la memoria interna")
-                else line("⚠ Sin tarjeta SD: guardará en la memoria interna")
-            } catch (_: Throwable) { line("· No se pudo leer el almacenamiento") }
+                    line(trf("✔ Tarjeta SD: %1\$s GB libres", "%.1f".format(sd.optDouble("free") / 1073741824.0)))
+                else if (sd != null) line(tr("⚠ Tarjeta SD de solo lectura o dañada: guardará en la memoria interna"))
+                else line(tr("⚠ Sin tarjeta SD: guardará en la memoria interna"))
+            } catch (_: Throwable) { line(tr("· No se pudo leer el almacenamiento")) }
             try {
-                line(if (get("/gpsfix").optString("fix") == "yes") "✔ GPS de la Sequoia con posición"
-                     else "⚠ GPS de la Sequoia SIN posición todavía: déjala al cielo abierto un par de minutos")
+                line(if (get("/gpsfix").optString("fix") == "yes") tr("✔ GPS de la Sequoia con posición")
+                     else tr("⚠ GPS de la Sequoia SIN posición todavía: déjala al cielo abierto un par de minutos"))
             } catch (_: Throwable) {}
             val m = Math.round(max(5.0, value)).toInt()
             val secs = Math.round(max(1.0, value) * 10) / 10.0
@@ -127,51 +128,51 @@ object SequoiaCam {
                 post(JSONObject().put("sensors_mask", 31)); Thread.sleep(300)
                 val cfg = get("/config")
                 val mode = cfg.optString("capture_mode")
-                if (mode != wantMode) { line("✘ No aceptó el modo ${if (byDistance) "GPS" else "time-lapse"} (está en «$mode»)"); return Report(false, l) }
-                line(if (byDistance) "✔ Modo GPS: un disparo cada ${cfg.optString("gps_param").ifEmpty { m.toString() }} m · 5 cámaras"
-                     else "✔ Time-lapse: un disparo cada ${cfg.optString("timelapse_param").ifEmpty { secs.toString() }} s · 5 cámaras")
-            } catch (t: Throwable) { line("✘ Error al configurar: ${t.message}"); return Report(false, l) }
+                if (mode != wantMode) { line(trf("✘ No aceptó el modo %1\$s (está en «%2\$s»)", if (byDistance) "GPS" else "time-lapse", mode)); return Report(false, l) }
+                line(if (byDistance) trf("✔ Modo GPS: un disparo cada %1\$s m · 5 cámaras", cfg.optString("gps_param").ifEmpty { m.toString() })
+                     else trf("✔ Time-lapse: un disparo cada %1\$s s · 5 cámaras", cfg.optString("timelapse_param").ifEmpty { secs.toString() }))
+            } catch (t: Throwable) { line(trf("✘ Error al configurar: %1\$s", t.message)); return Report(false, l) }
             try {
                 val r = get("/capture/start")
                 Thread.sleep(1000)
                 val st = get("/capture").optString("capture")
-                if (st == "running") line(if (byDistance) "✔ Captura armada: empezará a disparar sola en cuanto el dron avance (cada $m m)"
-                                          else "✔ Captura EN MARCHA: dispara ya cada $secs s (también en tierra)")
-                else { line("✘ La captura no arrancó (${r.optString("status", st)})"); return Report(false, l) }
-            } catch (t: Throwable) { line("✘ Error al arrancar la captura: ${t.message}"); return Report(false, l) }
-            return Report(true, l)
+                if (st == "running") line(if (byDistance) trf("✔ Captura armada: empezará a disparar sola en cuanto el dron avance (cada %1\$s m)", m)
+                                          else trf("✔ Captura EN MARCHA: dispara ya cada %1\$s s (también en tierra)", secs))
+                else { line(trf("✘ La captura no arrancó (%1\$s)", r.optString("status", st))); return Report(false, l) }
+            } catch (t: Throwable) { line(trf("✘ Error al arrancar la captura: %1\$s", t.message)); return Report(false, l) }
+            return Report(true, l, "armed")
         }
 
         /** Bloqueante. Lee lo que tiene programado (lo mismo que enseña su web). */
         fun inspect(): Report {
             val l = ArrayList<String>()
-            val cfg = try { get("/config") } catch (t: Throwable) { return Report(false, listOf("✘ La Sequoia no responde: ${t.message}")) }
+            val cfg = try { get("/config") } catch (t: Throwable) { return Report(false, listOf(trf("✘ La Sequoia no responde: %1\$s", t.message))) }
             val mode = cfg.optString("capture_mode")
-            l.add("Modo: " + when (mode) {
-                "gps_position" -> "📍 por distancia, cada ${cfg.optString("gps_param")} m"
-                "timelapse" -> "⏱ por tiempo, cada ${cfg.optString("timelapse_param")} s"
-                "single" -> "foto suelta (manual)"
-                "auto" -> "automático por solape (${cfg.optString("overlap_param")} %)"
+            l.add(tr("Modo: ") + when (mode) {
+                "gps_position" -> trf("📍 por distancia, cada %1\$s m", cfg.optString("gps_param"))
+                "timelapse" -> trf("⏱ por tiempo, cada %1\$s s", cfg.optString("timelapse_param"))
+                "single" -> tr("foto suelta (manual)")
+                "auto" -> trf("automático por solape (%1\$s %%)", cfg.optString("overlap_param"))
                 "" -> "?"
                 else -> mode
             })
             val mask = cfg.optInt("sensors_mask", -1)
             if (mask >= 0) {
-                val names = listOf("RGB", "verde", "rojo", "red edge", "infrarrojo")
+                val names = listOf("RGB", "verde", "rojo", tr("red edge"), "infrarrojo")
                 val on = names.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
-                l.add("Cámaras: ${if (on.size == 5) "las 5" else on.joinToString(", ").ifEmpty { "ninguna" }}")
+                l.add(trf("Cámaras: %1\$s", if (on.size == 5) "las 5" else on.joinToString(", ").ifEmpty { "ninguna" }))
             }
             try {
                 l.add(when (get("/capture").optString("capture")) {
-                    "running" -> "Estado: ✔ CAPTURANDO / armada"
-                    "ready" -> "Estado: parada (no hará fotos)"
-                    else -> "Estado: ?"
+                    "running" -> tr("Estado: ✔ CAPTURANDO / armada")
+                    "ready" -> tr("Estado: parada (no hará fotos)")
+                    else -> tr("Estado: ?")
                 })
             } catch (_: Throwable) {}
-            try { l.add(if (get("/gpsfix").optString("fix") == "yes") "GPS: con posición" else "GPS: sin posición") } catch (_: Throwable) {}
+            try { l.add(if (get("/gpsfix").optString("fix") == "yes") tr("GPS: con posición") else tr("GPS: sin posición")) } catch (_: Throwable) {}
             try {
                 val sd = get("/storage").optJSONObject("sd")
-                l.add(if (sd != null) "SD: ${"%.1f".format(sd.optDouble("free") / 1073741824.0)} GB libres" else "SD: no hay (memoria interna)")
+                l.add(if (sd != null) trf("SD: %1\$s GB libres", "%.1f".format(sd.optDouble("free") / 1073741824.0)) else tr("SD: no hay (memoria interna)"))
             } catch (_: Throwable) {}
             Crumbs.write("sequoia config: $cfg")
             return Report(true, l)
@@ -183,8 +184,9 @@ object SequoiaCam {
             try {
                 get("/capture/stop"); Thread.sleep(800)
                 val st = get("/capture").optString("capture")
-                l.add(if (st == "running") "⚠ Sigue capturando" else "✔ Captura parada")
-            } catch (t: Throwable) { l.add("✘ La Sequoia no responde: ${t.message}"); return Report(false, l) }
+                l.add(if (st == "running") tr("⚠ Sigue capturando") else tr("✔ Captura parada"))
+                if (st != "running") return Report(true, l, "stopped")
+            } catch (t: Throwable) { l.add(trf("✘ La Sequoia no responde: %1\$s", t.message)); return Report(false, l) }
             return Report(true, l)
         }
     }

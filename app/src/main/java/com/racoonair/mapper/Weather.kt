@@ -32,10 +32,10 @@ enum class Airframe(
     val fixedWing: Boolean
 ) {
     // Bluegrass: 25 min (Parrot). Temperatura: Parrot no la publica para la Bluegrass → 0–40 °C como la Disco.
-    BLUEGRASS("Bluegrass (multirrotor)", 8.0, 6.0, 8.0, 10.0, 0.0, 40.0, 25.0, null, false),
+    BLUEGRASS(tr("Bluegrass (multirrotor)"), 8.0, 6.0, 8.0, 10.0, 0.0, 40.0, 25.0, null, false),
     // Disco: 45 min (Parrot). Crucero 40–50 km/h → 12,5 m/s. Rojo antes del límite del fabricante (12 m/s),
     // porque con 10 m/s de cara el avance contra el viento es de ~2,5 m/s y la vuelta se eterniza.
-    DISCO("Disco (ala fija)", 12.0, 7.0, 10.0, 12.0, 0.0, 40.0, 45.0, 12.5, true);
+    DISCO(tr("Disco (ala fija)"), 12.0, 7.0, 10.0, 12.0, 0.0, 40.0, 45.0, 12.5, true);
 
     /**
      * Cuánto se alarga el vuelo con viento W (m/s) respecto a la calma.
@@ -82,7 +82,7 @@ object Weather {
 
     data class Verdict(val level: Int, val reasons: List<String>, val windAlt: Double, val gustAlt: Double, val timeFactor: Double) {
         val icon get() = when (level) { 0 -> "🟢"; 1 -> "🟠"; else -> "🔴" }
-        val word get() = when (level) { 0 -> "VOLABLE"; 1 -> "PRECAUCIÓN"; else -> "NO VOLAR" }
+        val word get() = when (level) { 0 -> "VOLABLE"; 1 -> tr("PRECAUCIÓN"); else -> tr("NO VOLAR") }
     }
 
     // ---------------------------------------------------------------- descarga
@@ -116,7 +116,7 @@ object Weather {
         val d10 = arr("wind_direction_10m"); val g10 = arr("wind_gusts_10m")
         val out = ArrayList<Hour>()
         val tz = try { java.time.ZoneId.of(o.optString("timezone", "")) } catch (_: Throwable) { off }
-        val fmt = DateTimeFormatter.ofPattern("EEE HH'h'", Locale("es", "ES"))
+        val fmt = DateTimeFormatter.ofPattern("EEE HH'h'", Locale(I18n.lang))
         for (i in 0 until time.length()) {
             // timeformat=unixtime → segundos UTC (bien también el día del cambio de hora); si viene como texto, hora local.
             val raw = time.get(i)
@@ -143,7 +143,7 @@ object Weather {
             for (i in 0 until head.length()) when (head.optString(i).lowercase(Locale.ROOT)) {
                 "time_tag" -> it = i; "kp" -> ik = i; "observed" -> io = i
             }
-            if (it < 0 || ik < 0) throw IllegalArgumentException("formato Kp desconocido")
+            if (it < 0 || ik < 0) throw IllegalArgumentException(tr("formato Kp desconocido"))
             for (r in 1 until a.length()) {
                 val row = a.optJSONArray(r) ?: continue
                 val e = epoch(row.optString(it)) ?: continue
@@ -154,7 +154,7 @@ object Weather {
             for (r in 0 until a.length()) {
                 val o = a.optJSONObject(r) ?: continue
                 val e = epoch(o.optString("time_tag")) ?: continue
-                val k = (o.opt("kp") ?: o.opt("Kp") ?: o.opt("kp_index") ?: o.opt("estimated_kp"))?.toString()?.toDoubleOrNull() ?: continue
+                val k = (o.opt("kp") ?: o.opt(tr("Kp")) ?: o.opt("kp_index") ?: o.opt("estimated_kp"))?.toString()?.toDoubleOrNull() ?: continue
                 out.add(Kp(e, k, o.optString("observed").lowercase(Locale.ROOT) == "observed"))
             }
         }
@@ -173,64 +173,64 @@ object Weather {
         fun add(l: Int, s: String) { level = max(level, l); r.add((if (l == 2) "⛔ " else if (l == 1) "⚠ " else "✔ ") + s) }
 
         val w = h.windAt(altM); val g = h.gustAt(altM)
-        val wTxt = "Viento a ${altM.roundToInt()} m: ${f1(w)} m/s (${(w * 3.6).roundToInt()} km/h)" +
-            (if (!g.isNaN()) ", ráfagas ${f1(g)} m/s" else "")
+        val wTxt = trf("Viento a %1\$s m: %2\$s m/s (%3\$s km/h)", altM.roundToInt(), f1(w), (w * 3.6).roundToInt()) +
+            (if (!g.isNaN()) trf(", ráfagas %1\$s m/s", f1(g)) else "")
         when {
-            w.isNaN() -> add(1, "Sin dato de viento")
-            w > a.windRed -> add(2, "$wTxt: por encima del límite (${f1(a.windRed)} m/s)")
-            !g.isNaN() && g > a.gustRed -> add(2, "$wTxt: ráfagas por encima de ${f1(a.gustRed)} m/s")
-            w > a.windAmber -> add(1, "$wTxt: fuerte para la ${a.label.substringBefore(' ')}")
-            !g.isNaN() && g > a.windRed -> add(1, "$wTxt: ráfagas fuertes")
+            w.isNaN() -> add(1, tr("Sin dato de viento"))
+            w > a.windRed -> add(2, trf("%1\$s: por encima del límite (%2\$s m/s)", wTxt, f1(a.windRed)))
+            !g.isNaN() && g > a.gustRed -> add(2, trf("%1\$s: ráfagas por encima de %2\$s m/s", wTxt, f1(a.gustRed)))
+            w > a.windAmber -> add(1, trf("%1\$s: fuerte para la %2\$s", wTxt, a.label.substringBefore(' ')))
+            !g.isNaN() && g > a.windRed -> add(1, trf("%1\$s: ráfagas fuertes", wTxt))
             else -> add(0, wTxt)
         }
         val tf = if (w.isNaN()) 1.0 else a.windTimeFactor(w)
         if (a.fixedWing && !w.isNaN()) {
             val v = a.cruise!!
             val up = v - w
-            if (up < 3.0) add(2, "Contra el viento avanzaría a ${f1(max(0.0, up))} m/s: puede no volver")
-            else if (up < 5.0) add(1, "Contra el viento solo avanza a ${f1(up)} m/s (crucero ~${f1(v)} m/s)")
-            if (!h.dir10.isNaN()) add(0, "Lanzar y aterrizar de cara al viento: mirando al ${rumbo(h.dir10)} (${h.dir10.roundToInt()}°)")
+            if (up < 3.0) add(2, trf("Contra el viento avanzaría a %1\$s m/s: puede no volver", f1(max(0.0, up))))
+            else if (up < 5.0) add(1, trf("Contra el viento solo avanza a %1\$s m/s (crucero ~%2\$s m/s)", f1(up), f1(v)))
+            if (!h.dir10.isNaN()) add(0, trf("Lanzar y aterrizar de cara al viento: mirando al %1\$s (%2\$s°)", rumbo(h.dir10), h.dir10.roundToInt()))
         }
         if (planMin != null && planMin > 0) {
             val usable = a.enduranceMin * 0.7 // hasta el ~30 % de batería
             val need = planMin * tf
             val ratio = need / usable
-            val txt = if (need.isInfinite()) "Con este viento el plan no se puede completar"
-                else "Plan ≈${f1(planMin)} min en calma → ≈${f1(need)} min con este viento (usable ≈${usable.roundToInt()} min hasta el 30 %)"
-            when { ratio > 1.0 -> add(2, "$txt: no da una batería, divide la zona"); ratio > 0.85 -> add(1, "$txt: muy justo"); else -> add(0, txt) }
+            val txt = if (need.isInfinite()) tr("Con este viento el plan no se puede completar")
+                else trf("Plan ≈%1\$s min en calma → ≈%2\$s min con este viento (usable ≈%3\$s min hasta el 30 %%)", f1(planMin), f1(need), usable.roundToInt())
+            when { ratio > 1.0 -> add(2, trf("%1\$s: no da una batería, divide la zona", txt)); ratio > 0.85 -> add(1, trf("%1\$s: muy justo", txt)); else -> add(0, txt) }
         }
         // Datos que faltan: nunca verde por omisión.
         val missing = ArrayList<String>()
-        if (h.gust10.isNaN()) missing.add("ráfagas")
+        if (h.gust10.isNaN()) missing.add(tr("ráfagas"))
         if (h.precip.isNaN() && h.precipProb.isNaN()) missing.add("lluvia")
-        if (h.code < 0) missing.add("tiempo (tormenta/niebla)")
+        if (h.code < 0) missing.add(tr("tiempo (tormenta/niebla)"))
         if (h.temp.isNaN()) missing.add("temperatura")
         if (h.visibility.isNaN()) missing.add("visibilidad")
-        if (missing.isNotEmpty()) add(1, "Sin dato de " + missing.joinToString(", "))
+        if (missing.isNotEmpty()) add(1, tr("Sin dato de ") + missing.joinToString(", "))
         when {
-            h.code in 95..99 -> add(2, "Tormenta prevista")
-            h.code in setOf(45, 48) -> add(2, "Niebla")
-            (h.code in 71..77 || h.code in 85..86) -> add(2, "Nieve")
+            h.code in 95..99 -> add(2, tr("Tormenta prevista"))
+            h.code in setOf(45, 48) -> add(2, tr("Niebla"))
+            (h.code in 71..77 || h.code in 85..86) -> add(2, tr("Nieve"))
         }
         when {
-            !h.precip.isNaN() && h.precip >= 0.2 -> add(2, "Lluvia prevista (${f1(h.precip)} mm)")
-            !h.precipProb.isNaN() && h.precipProb >= 60 -> add(2, "Probabilidad de lluvia ${h.precipProb.roundToInt()} %")
-            !h.precipProb.isNaN() && h.precipProb >= 30 -> add(1, "Probabilidad de lluvia ${h.precipProb.roundToInt()} %")
+            !h.precip.isNaN() && h.precip >= 0.2 -> add(2, trf("Lluvia prevista (%1\$s mm)", f1(h.precip)))
+            !h.precipProb.isNaN() && h.precipProb >= 60 -> add(2, trf("Probabilidad de lluvia %1\$s %%", h.precipProb.roundToInt()))
+            !h.precipProb.isNaN() && h.precipProb >= 30 -> add(1, trf("Probabilidad de lluvia %1\$s %%", h.precipProb.roundToInt()))
         }
         if (!h.temp.isNaN()) when {
-            h.temp < a.tempMin || h.temp > a.tempMax -> add(2, "Temperatura ${f1(h.temp)} °C fuera de ${a.tempMin.roundToInt()}–${a.tempMax.roundToInt()} °C")
-            h.temp < 5 -> add(1, "Frío (${f1(h.temp)} °C): la LiPo rinde menos, calienta las baterías")
-            h.temp > 35 -> add(1, "Calor (${f1(h.temp)} °C): vigila la temperatura de batería")
+            h.temp < a.tempMin || h.temp > a.tempMax -> add(2, trf("Temperatura %1\$s °C fuera de %2\$s–%3\$s °C", f1(h.temp), a.tempMin.roundToInt(), a.tempMax.roundToInt()))
+            h.temp < 5 -> add(1, trf("Frío (%1\$s °C): la LiPo rinde menos, calienta las baterías", f1(h.temp)))
+            h.temp > 35 -> add(1, trf("Calor (%1\$s °C): vigila la temperatura de batería", f1(h.temp)))
         }
         if (!h.visibility.isNaN()) when {
-            h.visibility < 1000 -> add(2, "Visibilidad ${(h.visibility / 1000).let { f1(it) }} km")
-            h.visibility < 3000 -> add(1, "Visibilidad reducida (${f1(h.visibility / 1000)} km)")
+            h.visibility < 1000 -> add(2, trf("Visibilidad %1\$s km", (h.visibility / 1000).let { f1(it) }))
+            h.visibility < 3000 -> add(1, trf("Visibilidad reducida (%1\$s km)", f1(h.visibility / 1000)))
         }
-        if (kp == null) add(1, "Kp (tormenta geomagnética) no disponible")
+        if (kp == null) add(1, tr("Kp (tormenta geomagnética) no disponible"))
         else when {
-            kp.kp >= 5 -> add(2, "Kp ${f1(kp.kp)}: tormenta geomagnética, el GPS puede fallar")
-            kp.kp >= 4 -> add(1, "Kp ${f1(kp.kp)}: actividad geomagnética, GPS menos fiable")
-            else -> add(0, "Kp ${f1(kp.kp)}: GPS sin problemas")
+            kp.kp >= 5 -> add(2, trf("Kp %1\$s: tormenta geomagnética, el GPS puede fallar", f1(kp.kp)))
+            kp.kp >= 4 -> add(1, trf("Kp %1\$s: actividad geomagnética, GPS menos fiable", f1(kp.kp)))
+            else -> add(0, trf("Kp %1\$s: GPS sin problemas", f1(kp.kp)))
         }
         return Verdict(level, r, w, g, tf)
     }
@@ -240,5 +240,5 @@ object Weather {
         return n[(((deg % 360) + 360) % 360 / 45.0).roundToInt() % 8]
     }
 
-    private fun f1(v: Double) = String.format(Locale("es", "ES"), "%.1f", v)
+    private fun f1(v: Double) = String.format(Locale(I18n.lang), "%.1f", v)
 }

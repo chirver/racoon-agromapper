@@ -32,9 +32,9 @@ import kotlin.math.tan
 /** Capas de teselas. PNOA (IGN, CC BY 4.0) es la ortofoto oficial de España y se puede descargar para usar sin
  *  conexión; Esri queda de reserva (fuera de España o si el IGN no responde) y solo se cachea lo que se ve. */
 enum class TileLayer(val dir: String, val ext: String, val attribution: String) {
-    PNOA("tiles-pnoa", "jpg", "Ortofoto PNOA © IGN (CC BY 4.0)"),
-    ESRI("tiles", "jpg", "Imágenes © Esri, Maxar, Earthstar Geographics"),
-    SIGPAC("tiles-sigpac", "png", "Recintos SIGPAC © FEGA (CC BY 4.0)");
+    PNOA("tiles-pnoa", "jpg", tr("Ortofoto PNOA © IGN (CC BY 4.0)")),
+    ESRI("tiles", "jpg", tr("Imágenes © Esri, Maxar, Earthstar Geographics")),
+    SIGPAC("tiles-sigpac", "png", tr("Recintos SIGPAC © FEGA (CC BY 4.0)"));
 
     fun url(z: Int, x: Int, y: Int): String = when (this) {
         PNOA -> "https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&version=1.0.0&layer=OI.OrthoimageCoverage" +
@@ -467,8 +467,8 @@ class MapView(ctx: Context) : View(ctx) {
             }
             canvas.drawText("D", s[0], s[1] + 9f, textPaint.apply { textSize = 24f })
         }
-        canvas.drawText(base.attribution + (if (base == TileLayer.PNOA) " · Esri fuera de España" else "") +
-            (if (showSigpac) " · SIGPAC © FEGA" else ""), 12f, height - 12f, attrPaint)
+        canvas.drawText(base.attribution + (if (base == TileLayer.PNOA) tr(" · Esri fuera de España") else "") +
+            (if (showSigpac) tr(" · SIGPAC © FEGA") else ""), 12f, height - 12f, attrPaint)
     }
 
     fun release() { pool.shutdownNow() }

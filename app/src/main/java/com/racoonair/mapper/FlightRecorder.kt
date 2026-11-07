@@ -38,9 +38,9 @@ object FlightRecorder {
         val now = SystemClock.elapsedRealtime()
         if (file == null) {
             if (!airborne) return
-            val name = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+            val name = SimpleDateFormat(tr("yyyyMMdd-HHmmss"), Locale.ROOT).format(Date())
             file = File(dir(ctx), "$name.csv").also {
-                it.writeText("# Racoon AgroMapper · vuelo $name · plan: $planName\n" +
+                it.writeText(trf("# Racoon AgroMapper · vuelo %1\$s · plan: %2\$s\n", name, planName) +
                     "t_s,lat,lon,alt_m,vel_ms,bateria,rumbo,estado_vuelo,estado_plan,item,alerta,evento\n")
             }
             t0 = now; lastSample = 0; landedSince = 0; lastItem = -1; lastPlanState = -1
@@ -62,7 +62,7 @@ object FlightRecorder {
             if (landedSince == 0L) landedSince = now
             if (now - landedSince > 5000) { event(t, "aterrizado"); file = null }
         } else landedSince = 0
-        if (t.flyingStateRaw == -1 && !linkLostLogged) { linkLostLogged = true; event(t, "enlace perdido") }
+        if (t.flyingStateRaw == -1 && !linkLostLogged) { linkLostLogged = true; event(t, tr("enlace perdido")) }
         if (t.flyingStateRaw >= 0) linkLostLogged = false
     }
 
@@ -95,7 +95,7 @@ object FlightRecorder {
     /** Resumen legible de un CSV de vuelo (duración, distancia, batería, velocidad media). */
     fun summarize(f: File): String {
         val rows = f.readLines().filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("t_s") }.map { it.split(',') }
-        if (rows.isEmpty()) return "Vuelo vacío"
+        if (rows.isEmpty()) return tr("Vuelo vacío")
         var dist = 0.0; var prev: LatLon? = null
         for (r in rows) {
             val la = r.getOrNull(1)?.toDoubleOrNull(); val lo = r.getOrNull(2)?.toDoubleOrNull()
@@ -104,7 +104,7 @@ object FlightRecorder {
         val dur = rows.last()[0].toDoubleOrNull() ?: 0.0
         val bats = rows.mapNotNull { it.getOrNull(5)?.toIntOrNull() }
         val events = rows.filter { it.getOrNull(11)?.isNotBlank() == true }.joinToString("\n") { "  ${it[0]} s: ${it[11]}" }
-        return String.format(Locale.ROOT, "Duración %.1f min · recorrido %.0f m · velocidad media %.1f m/s · batería %s→%s %%\nEventos:\n%s",
+        return String.format(Locale.ROOT, tr("Duración %.1f min · recorrido %.0f m · velocidad media %.1f m/s · batería %s→%s %%\nEventos:\n%s"),
             dur / 60, dist, if (dur > 0) dist / dur else 0.0, bats.firstOrNull() ?: "?", bats.lastOrNull() ?: "?", events)
     }
 }

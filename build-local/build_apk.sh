@@ -40,7 +40,8 @@ if [ -d "$SRC/$FLAVOR/res" ]; then "$AAPT2" compile --dir "$SRC/$FLAVOR/res" -o 
 # El código vive en com.racoonair.mapper; el id de la app puede cambiar (ANAFI) para instalarse a la vez.
 "$AAPT2" link -I "$ANDROID_JAR" --manifest "$OUT/AndroidManifest.xml" -o "$OUT/base.apk" \
   --min-sdk-version 26 --target-sdk-version 29 --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
-  --rename-manifest-package "$PKG" --java "$OUT/gen" $EXTRA_PKGS "${RES_ZIPS[@]}"
+  --rename-manifest-package "$PKG" --java "$OUT/gen" $EXTRA_PKGS \
+  $( [ -d "$SRC/main/assets" ] && echo -A "$SRC/main/assets" ) "${RES_ZIPS[@]}"
 javac -nowarn --release 8 -d "$OUT/classes" $(find "$OUT/gen" -name '*.java')
 
 echo "[1/6] Kotlin → .class"

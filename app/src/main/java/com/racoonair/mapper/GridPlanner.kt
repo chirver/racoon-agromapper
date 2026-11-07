@@ -28,13 +28,13 @@ data class Camera(
 ) {
     companion object {
         /** Parrot Sequoia, bandas multiespectrales (datos de cameras.json de Pix4Dcapture: 4,8 mm · 3,98 mm · 1280×960). */
-        val SEQUOIA = Camera("SEQUOIA", "Bluegrass/Disco · Sequoia (multiespectral)", 4.8, 3.6, 3.98, 1280, 960, 1.0, Platform.BLUEGRASS_SEQUOIA)
+        val SEQUOIA = Camera("SEQUOIA", tr("Bluegrass/Disco · Sequoia (multiespectral)"), 4.8, 3.6, 3.98, 1280, 960, 1.0, Platform.BLUEGRASS_SEQUOIA)
         /**
          * ANAFI Thermal: RGB + térmica a la vez. Geometría de cameras.json de Pix4Dcapture (5,92 mm · 4,04 mm ·
          * 5344×4016, intervalo mínimo 2,5 s); la térmica (160×120) se guarda alineada con el mismo encuadre.
          */
-        val ANAFI_THERMAL = Camera("ANAFI_THERMAL", "ANAFI Thermal · RGB + térmica", 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI, 160)
-        val ANAFI_4K = Camera("ANAFI_4K", "ANAFI 4K / USA · RGB", 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI)
+        val ANAFI_THERMAL = Camera("ANAFI_THERMAL", tr("ANAFI Thermal · RGB + térmica"), 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI, 160)
+        val ANAFI_4K = Camera("ANAFI_4K", tr("ANAFI 4K / USA · RGB"), 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI)
         val ALL = listOf(SEQUOIA, ANAFI_THERMAL, ANAFI_4K)
         fun byId(id: String?) = ALL.firstOrNull { it.id == id } ?: SEQUOIA
     }
@@ -145,34 +145,34 @@ class GridResult(
     fun blockers(): List<String> {
         val b = ArrayList<String>()
         fw?.let { f ->
-            if (f.landing == null) b.add("Falta el aterrizaje: pulsa «🛬 Aterrizaje», toca el punto de toma y luego de dónde llega el avión.")
+            if (f.landing == null) b.add(tr("Falta el aterrizaje: pulsa «🛬 Aterrizaje», toca el punto de toma y luego de dónde llega el avión."))
             else {
-                if (!f.headingSet) b.add("Falta la dirección de la final: toca de dónde llega el avión o pulsa «🌬 Según viento».")
+                if (!f.headingSet) b.add(tr("Falta la dirección de la final: toca de dónde llega el avión o pulsa «🌬 Según viento»."))
                 val dl = GridPlanner.distance(home, f.landing)
-                if (dl > FixedWing.MAX_LAND_FROM_LAUNCH) b.add("El punto de toma está a ${dl.toInt()} m del lanzamiento (máx. ${FixedWing.MAX_LAND_FROM_LAUNCH.toInt()} m): ¿es de otra parcela? Vuelve a fijarlo.")
-                if (dl > FixedWing.ELEV_CHECK_DIST && !f.elevSet) b.add("La toma está a ${dl.toInt()} m del lanzamiento: indica el desnivel en «Aprox…» (0 si es llano).")
-                if (f.approachAlt / f.approachDist > FixedWing.MAX_GLIDE) b.add("Final demasiado empinada (${"%.0f".format(f.approachAlt)} m en ${"%.0f".format(f.approachDist)} m): baja la altura o alarga la aproximación.")
-                if (f.approachAltRel > params.altitude) b.add("La aproximación (${"%.0f".format(f.approachAltRel)} m) no puede ir más alta que el vuelo (${"%.0f".format(params.altitude)} m).")
-                if (f.approachAltRel < 15.0) b.add("Con ese desnivel la aproximación queda a ${"%.0f".format(f.approachAltRel)} m sobre el lanzamiento: súbela.")
+                if (dl > FixedWing.MAX_LAND_FROM_LAUNCH) b.add(trf("El punto de toma está a %1\$s m del lanzamiento (máx. %2\$s m): ¿es de otra parcela? Vuelve a fijarlo.", dl.toInt(), FixedWing.MAX_LAND_FROM_LAUNCH.toInt()))
+                if (dl > FixedWing.ELEV_CHECK_DIST && !f.elevSet) b.add(trf("La toma está a %1\$s m del lanzamiento: indica el desnivel en «Aprox…» (0 si es llano).", dl.toInt()))
+                if (f.approachAlt / f.approachDist > FixedWing.MAX_GLIDE) b.add(trf("Final demasiado empinada (%1\$s m en %2\$s m): baja la altura o alarga la aproximación.", "%.0f".format(f.approachAlt), "%.0f".format(f.approachDist)))
+                if (f.approachAltRel > params.altitude) b.add(trf("La aproximación (%1\$s m) no puede ir más alta que el vuelo (%2\$s m).", "%.0f".format(f.approachAltRel), "%.0f".format(params.altitude)))
+                if (f.approachAltRel < 15.0) b.add(trf("Con ese desnivel la aproximación queda a %1\$s m sobre el lanzamiento: súbela.", "%.0f".format(f.approachAltRel)))
             }
             val tight = (1 until passes.size).count { i -> GridPlanner.distance(passes[i - 1].second, passes[i].first) < 2 * FixedWing.TURN_RADIUS - 1 }
-            if (tight > 0) b.add("$tight giro(s) entre pasadas más cerrados de ${(2 * FixedWing.TURN_RADIUS).toInt()} m: la Disco podría quedarse dando vueltas. Cambia el rumbo de las pasadas, sube la altura o baja el solape lateral."+
-                (if (passes.size < 4) " (con tan pocas pasadas no hay orden posible: amplía la zona)" else ""))
-            if (params.altitude < FixedWing.MIN_ALT) b.add("La Disco necesita volar a ${FixedWing.MIN_ALT.toInt()} m o más.")
-            if (f.approachAlt !in 15.0..60.0) b.add("Altura de aproximación entre 15 y 60 m.")
-            if (f.approachDist !in 120.0..400.0) b.add("Distancia de aproximación entre 120 y 400 m.")
+            if (tight > 0) b.add(trf("%1\$s giro(s) entre pasadas más cerrados de %2\$s m: la Disco podría quedarse dando vueltas. Cambia el rumbo de las pasadas, sube la altura o baja el solape lateral.", tight, (2 * FixedWing.TURN_RADIUS).toInt())+
+                (if (passes.size < 4) tr(" (con tan pocas pasadas no hay orden posible: amplía la zona)") else ""))
+            if (params.altitude < FixedWing.MIN_ALT) b.add(trf("La Disco necesita volar a %1\$s m o más.", FixedWing.MIN_ALT.toInt()))
+            if (f.approachAlt !in 15.0..60.0) b.add(tr("Altura de aproximación entre 15 y 60 m."))
+            if (f.approachDist !in 120.0..400.0) b.add(tr("Distancia de aproximación entre 120 y 400 m."))
             // La Disco no puede ir más despacio que su crucero: la Sequoia (1 foto/s como máximo) debe dar abasto.
             if (triggerDistance < FixedWing.CRUISE * params.camera.minIntervalS)
-                b.add("A ${FixedWing.CRUISE} m/s la Sequoia necesita ${"%.1f".format(FixedWing.CRUISE * params.camera.minIntervalS)} m o más entre fotos (ahora ${"%.1f".format(triggerDistance)} m): sube la altura o baja el solape frontal.")
-            if (estimatedSeconds > FixedWing.USABLE_MIN * 60) b.add("Vuelo estimado de ${"%.0f".format(estimatedSeconds / 60)} min: no cabe en una batería de Disco. Divide la zona.")
-            if (params.altitude > 120.0) b.add("Altura máxima 120 m.")
-            if (passes.size > GridPlanner.MAX_PASSES) b.add("${passes.size} pasadas (máx. ${GridPlanner.MAX_PASSES}).")
+                b.add(trf("A %1\$s m/s la Sequoia necesita %2\$s m o más entre fotos (ahora %3\$s m): sube la altura o baja el solape frontal.", FixedWing.CRUISE, "%.1f".format(FixedWing.CRUISE * params.camera.minIntervalS), "%.1f".format(triggerDistance)))
+            if (estimatedSeconds > FixedWing.USABLE_MIN * 60) b.add(trf("Vuelo estimado de %1\$s min: no cabe en una batería de Disco. Divide la zona.", "%.0f".format(estimatedSeconds / 60)))
+            if (params.altitude > 120.0) b.add(tr("Altura máxima 120 m."))
+            if (passes.size > GridPlanner.MAX_PASSES) b.add(trf("%1\$s pasadas (máx. %2\$s).", passes.size, GridPlanner.MAX_PASSES))
             return b
         }
-        if (params.altitude > 120.0) b.add("Altura máxima 120 m.")
-        if (estimatedSeconds > 22 * 60) b.add("Vuelo estimado de ${"%.0f".format(estimatedSeconds / 60)} min: no cabe en una batería. Divide la zona o sube la altura.")
-        if (passes.size > GridPlanner.MAX_PASSES) b.add("${passes.size} pasadas (máx. ${GridPlanner.MAX_PASSES}). Baja el solape lateral o sube la altura.")
-        if (effectiveSpeed < 2.0) b.add("Velocidad resultante ${"%.1f".format(effectiveSpeed)} m/s: demasiado lenta. Baja el solape frontal o sube la altura.")
+        if (params.altitude > 120.0) b.add(tr("Altura máxima 120 m."))
+        if (estimatedSeconds > 22 * 60) b.add(trf("Vuelo estimado de %1\$s min: no cabe en una batería. Divide la zona o sube la altura.", "%.0f".format(estimatedSeconds / 60)))
+        if (passes.size > GridPlanner.MAX_PASSES) b.add(trf("%1\$s pasadas (máx. %2\$s). Baja el solape lateral o sube la altura.", passes.size, GridPlanner.MAX_PASSES))
+        if (effectiveSpeed < 2.0) b.add(trf("Velocidad resultante %1\$s m/s: demasiado lenta. Baja el solape frontal o sube la altura.", "%.1f".format(effectiveSpeed)))
         return b
     }
     /** Tiempo estimado en segundos: subida, tránsitos a 10 m/s, pasadas, giros y aterrizaje. */
@@ -190,29 +190,29 @@ class GridResult(
         val min = estimatedSeconds / 60.0
         fw?.let { f ->
             return String.format(Locale.ROOT,
-                "DISCO (ala fija) · Sequoia %s\nPasadas %d · separación %.1f m · rumbo %.0f°%s\n" +
-                    "Foto cada %.1f m · ~%d fotos · GSD %.1f cm/px · área %.2f ha\n" +
-                    "Crucero %.1f m/s · ruta %.0f m · tiempo estimado %.1f min\n%s",
-                if (f.droneCamera) "gobernada por el dron" else "por libre (prepárala por WiFi)",
+                tr("DISCO (ala fija) · Sequoia %s\nPasadas %d · separación %.1f m · rumbo %.0f°%s\n") +
+                    tr("Foto cada %.1f m · ~%d fotos · GSD %.1f cm/px · área %.2f ha\n") +
+                    tr("Crucero %.1f m/s · ruta %.0f m · tiempo estimado %.1f min\n%s"),
+                if (f.droneCamera) tr("gobernada por el dron") else tr("por libre (prepárala por WiFi)"),
                 passes.size, lineSpacing, angleDeg,
-                if (skip > 1) " · alternas de $skip en $skip (giro de ${FixedWing.TURN_RADIUS.toInt()} m)" else "",
+                if (skip > 1) trf(" · alternas de %1\$s en %2\$s (giro de %3\$s m)", skip, skip, FixedWing.TURN_RADIUS.toInt()) else "",
                 triggerDistance, photos, gsdCm, areaM2 / 10000.0,
                 FixedWing.CRUISE, surveyLength + transitLength + landingLength, min,
-                if (f.landing == null) "🛬 Aterrizaje SIN fijar"
-                else String.format(Locale.ROOT, "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura",
+                if (f.landing == null) tr("🛬 Aterrizaje SIN fijar")
+                else String.format(Locale.ROOT, tr("🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura"),
                     f.finalHeading, f.approachDist, f.approachAlt))
         }
         val cam = params.camera
         val shot = if (cam.platform == Platform.ANAFI)
-            String.format(Locale.ROOT, "Foto cada %.1f m (%.1f s)", triggerDistance, intervalS)
-        else String.format(Locale.ROOT, "Disparo Sequoia cada %.1f m", triggerDistance)
+            String.format(Locale.ROOT, tr("Foto cada %.1f m (%.1f s)"), triggerDistance, intervalS)
+        else String.format(Locale.ROOT, tr("Disparo Sequoia cada %.1f m"), triggerDistance)
         val gsd = if (cam.thermalWidthPx > 0)
-            String.format(Locale.ROOT, "GSD RGB %.1f · térmica %.0f cm/px", gsdCm, cam.thermalGsdCm(params.altitude))
-        else String.format(Locale.ROOT, "GSD %.1f cm/px", gsdCm)
-        val limit = if (!speedLimited) "" else if (cam.platform == Platform.ANAFI) " (limitada: 1 foto cada 2,5 s)" else " (limitada por la Sequoia: 1 foto/s)"
+            String.format(Locale.ROOT, tr("GSD RGB %.1f · térmica %.0f cm/px"), gsdCm, cam.thermalGsdCm(params.altitude))
+        else String.format(Locale.ROOT, tr("GSD %.1f cm/px"), gsdCm)
+        val limit = if (!speedLimited) "" else if (cam.platform == Platform.ANAFI) tr(" (limitada: 1 foto cada 2,5 s)") else tr(" (limitada por la Sequoia: 1 foto/s)")
         return String.format(Locale.ROOT,
-            "%s\nPasadas %d · separación %.1f m · rumbo %.0f°\n%s · ~%d fotos · %s\n" +
-                "Velocidad %.1f m/s%s · área %.2f ha\nRuta %.0f m · tiempo estimado %.1f min",
+            tr("%s\nPasadas %d · separación %.1f m · rumbo %.0f°\n%s · ~%d fotos · %s\n") +
+                tr("Velocidad %.1f m/s%s · área %.2f ha\nRuta %.0f m · tiempo estimado %.1f min"),
             cam.name, passes.size, lineSpacing, angleDeg, shot, photos, gsd,
             effectiveSpeed, limit, areaM2 / 10000.0, surveyLength + transitLength, min)
     }
@@ -220,22 +220,22 @@ class GridResult(
     fun warnings(): List<String> {
         val w = ArrayList<String>()
         fw?.let { f ->
-            if (concave) w.add("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado.")
-            if (estimatedSeconds > 0.85 * FixedWing.USABLE_MIN * 60) w.add("Vuelo justo para una batería de Disco.")
+            if (concave) w.add(tr("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado."))
+            if (estimatedSeconds > 0.85 * FixedWing.USABLE_MIN * 60) w.add(tr("Vuelo justo para una batería de Disco."))
             f.landing?.let { ld ->
                 val d = GridPlanner.distance(home, ld)
-                if (d > 500) w.add("El punto de toma está a ${d.toInt()} m del lanzamiento: ¿lo verás bien?")
+                if (d > 500) w.add(trf("El punto de toma está a %1\$s m del lanzamiento: ¿lo verás bien?", d.toInt()))
             }
-            w.add("Los giros entre pasadas salen hasta ~${(FixedWing.RUN_IN + 2 * FixedWing.TURN_RADIUS).toInt()} m fuera de la parcela: que no haya obstáculos ni zonas prohibidas alrededor.")
-            w.add("Revisa en la ortofoto que el pasillo de aproximación (cono azul) está libre de árboles, cables y casas.")
+            w.add(trf("Los giros entre pasadas salen hasta ~%1\$s m fuera de la parcela: que no haya obstáculos ni zonas prohibidas alrededor.", (FixedWing.RUN_IN + 2 * FixedWing.TURN_RADIUS).toInt()))
+            w.add(tr("Revisa en la ortofoto que el pasillo de aproximación (cono azul) está libre de árboles, cables y casas."))
             return w
         }
-        if (params.altitude > 120) w.add("Altura por encima de 120 m.")
-        if (params.altitude < 20) w.add("Altura muy baja (<20 m): obstáculos y muchas fotos.")
-        if (concave) w.add("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado. Revisa obstáculos o divide la zona.")
-        if (estimatedSeconds > 18 * 60) w.add("Vuelo de más de 18 min: probablemente no da una batería de Bluegrass. Divide la zona.")
+        if (params.altitude > 120) w.add(tr("Altura por encima de 120 m."))
+        if (params.altitude < 20) w.add(tr("Altura muy baja (<20 m): obstáculos y muchas fotos."))
+        if (concave) w.add(tr("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado. Revisa obstáculos o divide la zona."))
+        if (estimatedSeconds > 18 * 60) w.add(tr("Vuelo de más de 18 min: probablemente no da una batería de Bluegrass. Divide la zona."))
         val d0 = GridPlanner.distance(home, passes.firstOrNull()?.first ?: home)
-        if (d0 > 500) w.add("El primer punto está a ${d0.toInt()} m de la casa.")
+        if (d0 > 500) w.add(trf("El primer punto está a %1\$s m de la casa.", d0.toInt()))
         return w
     }
 
@@ -255,7 +255,7 @@ class GridResult(
      */
     private fun toMavlinkDisco(): String {
         val f = fw!!
-        val ld = requireNotNull(f.landing) { "Falta el aterrizaje" }
+        val ld = requireNotNull(f.landing) { tr("Falta el aterrizaje") }
         val sb = StringBuilder("QGC WPL 120\n")
         var i = 0
         fun item(cmd: Int, p1: Double = 0.0, p2: Double = 0.0, p3: Double = 0.0, p4: Double = 0.0,
@@ -522,10 +522,10 @@ object GridPlanner {
     }
 
     fun plan(poly: List<LatLon>, home: LatLon, p: GridParams): GridResult {
-        require(poly.size >= 3) { "Dibuja al menos 3 puntos" }
-        require(p.altitude.isFinite() && p.altitude in 10.0..120.0) { "Altura entre 10 y 120 m" }
-        require(p.speed.isFinite() && p.overshoot.isFinite()) { "Parámetros no válidos" }
-        require(p.frontOverlap in 0.3..0.95 && p.sideOverlap in 0.3..0.95) { "Solapes entre 30 y 95 %" }
+        require(poly.size >= 3) { tr("Dibuja al menos 3 puntos") }
+        require(p.altitude.isFinite() && p.altitude in 10.0..120.0) { tr("Altura entre 10 y 120 m") }
+        require(p.speed.isFinite() && p.overshoot.isFinite()) { tr("Parámetros no válidos") }
+        require(p.frontOverlap in 0.3..0.95 && p.sideOverlap in 0.3..0.95) { tr("Solapes entre 30 y 95 %") }
         val angle = p.angleDeg ?: autoAngle(poly)
         val (fw, fh) = p.camera.footprint(p.altitude)
         // Sequoia: lado largo de la imagen transversal a la pasada (como el montaje en la Bluegrass).
@@ -546,7 +546,7 @@ object GridPlanner {
 
         val passes = ArrayList<Pair<LatLon, LatLon>>()
         var concave = false
-        require((maxV - minV) / lineSpacing < 2000) { "Demasiadas pasadas" }
+        require((maxV - minV) / lineSpacing < 2000) { tr("Demasiadas pasadas") }
         val n = max(1, ceil((maxV - minV) / lineSpacing).toInt())
         val start = minV + ((maxV - minV) - (n - 1) * lineSpacing) / 2.0
         for (k in 0 until n) {
@@ -568,7 +568,7 @@ object GridPlanner {
             val a = unrot(u0, v); val b = unrot(u1, v)
             passes.add(Pair(l.toLL(a[0], a[1]), l.toLL(b[0], b[1])))
         }
-        require(passes.isNotEmpty()) { "No salen pasadas: zona demasiado pequeña" }
+        require(passes.isNotEmpty()) { tr("No salen pasadas: zona demasiado pequeña") }
         if (p.fixedWing != null) return planFixedWing(poly, home, p, angle, lineSpacing, trigger, passes, concave)
         // Empezar por el extremo más cercano a la casa.
         val first = passes.first(); val last = passes.last()

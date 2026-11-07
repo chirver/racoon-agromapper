@@ -21,21 +21,21 @@ object Sigpac {
         val huecos: Int
     ) {
         val codigo get() = "$provincia:$municipio:$agregado:$zona:$poligono:$parcela:$recinto"
-        val nombre get() = "Pol $poligono · Parc $parcela · Rec $recinto"
+        val nombre get() = trf("Pol %1\$s · Parc %2\$s · Rec %3\$s", poligono, parcela, recinto)
         fun descripcion(): String = buildString {
             append("$nombre  (${codigo})\n")
-            append("Uso: ${USOS[uso] ?: uso}  ·  ${"%.2f".format(Locale.ROOT, superficieHa)} ha")
-            pendiente?.let { append("  ·  pendiente media ${"%.1f".format(Locale.ROOT, it)} %") }
+            append(trf("Uso: %1\$s  ·  %2\$s ha", USOS[uso] ?: uso, "%.2f".format(Locale.ROOT, superficieHa)))
+            pendiente?.let { append(trf("  ·  pendiente media %1\$s %%", "%.1f".format(Locale.ROOT, it))) }
         }
     }
 
     val USOS = mapOf(
-        "TA" to "tierra arable", "VI" to "viñedo", "OV" to "olivar", "PS" to "pastizal", "PR" to "pasto arbustivo",
-        "PA" to "pasto con arbolado", "FO" to "forestal", "FY" to "frutales", "FS" to "frutos secos", "CI" to "cítricos",
-        "TH" to "huerta", "IV" to "invernadero", "VO" to "viñedo-olivar", "VF" to "viñedo-frutal", "OF" to "olivar-frutal",
-        "FL" to "frutos secos y olivar", "FV" to "frutos secos y viñedo", "CA" to "viales", "ED" to "edificación",
-        "IM" to "improductivo", "AG" to "agua", "ZU" to "zona urbana", "ZC" to "zona concentrada", "MT" to "matorral",
-        "CF" to "cítricos-frutal", "CS" to "cítricos-frutos secos", "CV" to "cítricos-viñedo", "OC" to "olivar-cítricos"
+        "TA" to tr("tierra arable"), "VI" to tr("viñedo"), "OV" to tr("olivar"), "PS" to tr("pastizal"), "PR" to tr("pasto arbustivo"),
+        "PA" to tr("pasto con arbolado"), "FO" to tr("forestal"), "FY" to tr("frutales"), "FS" to tr("frutos secos"), "CI" to tr("cítricos"),
+        "TH" to tr("huerta"), "IV" to tr("invernadero"), "VO" to tr("viñedo-olivar"), "VF" to tr("viñedo-frutal"), "OF" to tr("olivar-frutal"),
+        "FL" to tr("frutos secos y olivar"), "FV" to tr("frutos secos y viñedo"), "CA" to tr("viales"), "ED" to tr("edificación"),
+        "IM" to tr("improductivo"), "AG" to tr("agua"), "ZU" to tr("zona urbana"), "ZC" to tr("zona concentrada"), "MT" to tr("matorral"),
+        "CF" to tr("cítricos-frutal"), "CS" to tr("cítricos-frutos secos"), "CV" to tr("cítricos-viñedo"), "OC" to tr("olivar-cítricos")
     )
 
     fun url(p: LatLon) = String.format(Locale.ROOT,
@@ -56,7 +56,7 @@ object Sigpac {
                     val f = o.getJSONArray("features"); for (i in 0 until f.length()) a.put(f.getJSONObject(i).optJSONObject("properties") ?: JSONObject())
                 } else JSONArray().put(o)
             }
-            else -> throw IllegalArgumentException("respuesta SIGPAC no reconocida")
+            else -> throw IllegalArgumentException(tr("respuesta SIGPAC no reconocida"))
         }
         val out = ArrayList<Recinto>()
         for (i in 0 until arr.length()) {
