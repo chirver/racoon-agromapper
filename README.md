@@ -41,7 +41,7 @@
 Phone: Android 8.0+ (tested on Android 12).
 
 ### Install
-Download the APK from [Releases](../../releases), open it on the phone and allow installing from unknown sources.
+**[⬇ Download RacoonAgroMapper-0.12.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.apk)**, open it on the phone and allow installing from unknown sources. Older and newer builds: [`dist/`](dist) and [Releases](../../releases).
 
 ### Build
 No Android Studio or Gradle needed: `build-local/build_apk.sh` builds the APK with `aapt2`, `kotlinc` and `dx` (see the header of the script for the required paths). Flavours: `FLAVOR=parrot` (Bluegrass/Disco) and `FLAVOR=anafi`.
@@ -73,7 +73,7 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
 - Registro de vuelo (CSV), exportación KML y diagnóstico.
 
 ### Instalar
-Descarga el APK de [Releases](../../releases), ábrelo en el móvil y permite instalar apps de origen desconocido.
+**[⬇ Descargar RacoonAgroMapper-0.12.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.apk)**, ábrelo en el móvil y permite instalar apps de origen desconocido.
 
 ### Licencia
 Software libre bajo **GNU GPL v3.0** ([LICENSE](LICENSE)). Los componentes de terceros y sus licencias están en [NOTICE.md](NOTICE.md).

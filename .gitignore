@@ -17,3 +17,6 @@ keystore.properties
 local.properties
 .DS_Store
 captures/
+
+# APK publicados para descarga directa
+!dist/*.apk
