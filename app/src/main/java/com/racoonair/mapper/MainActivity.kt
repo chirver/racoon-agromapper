@@ -679,6 +679,8 @@ class MainActivity : Activity(), DroneLink.Listener {
         val lg = card(tr("Registro"))
         lg.addView(row(button(tr("Diagnóstico (compartir registro)"), C_GREY) { showDiagnostics() },
             button("🌐 " + (I18n.LANGS[I18n.lang] ?: "Idioma"), C_GREY) { pickLanguage() }))
+        lg.addView(row(button(tr("☕ Invítame a un café"), 0xFF5A4632.toInt()) { openUrl("https://www.paypal.me/JMorenoChirveches") },
+            button(tr("Código y novedades (GitHub)"), C_GREY) { openUrl("https://github.com/chirver/racoon-agromapper") }))
         logText = label(12f, mono = true)
         logText.movementMethod = ScrollingMovementMethod()
         lg.addView(logText)
@@ -870,6 +872,11 @@ class MainActivity : Activity(), DroneLink.Listener {
             cross > 4.0 -> trf("⚠ Viento cruzado de %1\$s m/s en la final (rumbo %2\$s°).", "%.1f".format(cross), heading.toInt())
             else -> trf("Viento en la final: ✔ de cara (%1\$s m/s del %2\$s).", "%.1f".format(h.wind10), Weather.rumbo(h.dir10))
         }
+    }
+
+    private fun openUrl(u: String) {
+        try { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(u))) }
+        catch (_: Throwable) { Toast.makeText(this, u, Toast.LENGTH_LONG).show() }
     }
 
     // ------------------------------------------------------------------ idioma

@@ -771,5 +771,7 @@
  "🗺 Mapa": "🗺 Carte",
  "🛬 Aterrizaje": "🛬 Atterrissage",
  "🛬 Aterrizaje SIN fijar": "🛬 Atterrissage NON fixé",
- "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Finale cap %.0f° · approche à %.0f m et %.0f m de hauteur"
+ "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Finale cap %.0f° · approche à %.0f m et %.0f m de hauteur",
+ "☕ Invítame a un café": "☕ Offrez-moi un café",
+ "Código y novedades (GitHub)": "Code et nouveautés (GitHub)"
 }

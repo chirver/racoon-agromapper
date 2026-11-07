@@ -771,5 +771,7 @@
  "🗺 Mapa": "🗺 Karte",
  "🛬 Aterrizaje": "🛬 Landung",
  "🛬 Aterrizaje SIN fijar": "🛬 Landung NICHT festgelegt",
- "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Endanflug Kurs %.0f° · Anflug auf %.0f m und %.0f m Höhe"
+ "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Endanflug Kurs %.0f° · Anflug auf %.0f m und %.0f m Höhe",
+ "☕ Invítame a un café": "☕ Spendier mir einen Kaffee",
+ "Código y novedades (GitHub)": "Code & Neuigkeiten (GitHub)"
 }

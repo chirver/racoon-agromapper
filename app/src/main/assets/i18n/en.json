@@ -771,5 +771,7 @@
  "🗺 Mapa": "🗺 Map",
  "🛬 Aterrizaje": "🛬 Landing",
  "🛬 Aterrizaje SIN fijar": "🛬 Landing NOT set",
- "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Final heading %.0f° · approach at %.0f m and %.0f m height"
+ "🛬 Final rumbo %.0f° · aproximación a %.0f m y %.0f m de altura": "🛬 Final heading %.0f° · approach at %.0f m and %.0f m height",
+ "☕ Invítame a un café": "☕ Buy me a coffee",
+ "Código y novedades (GitHub)": "Code & updates (GitHub)"
 }
