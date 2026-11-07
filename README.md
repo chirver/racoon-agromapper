@@ -9,6 +9,8 @@
 > ⚠️ **Use at your own risk.** This software commands real aircraft. It is provided WITHOUT ANY WARRANTY (see the GPL-3.0 licence). Always fly within the law, keep line of sight, and be ready to take manual control with your SkyController.
 > **Uso bajo tu responsabilidad.** Esta app manda aviones de verdad y no tiene ninguna garantía. Vuela siempre dentro de la ley, con el dron a la vista y listo para tomar el control con el SkyController.
 
+[![Donate · Invítame a un café](https://img.shields.io/badge/PayPal-Inv%C3%ADtame%20a%20un%20caf%C3%A9-0070ba?logo=paypal)](https://www.paypal.me/JMorenoChirveches)
+
 🇬🇧 [English](#english) · 🇪🇸 [Español](#español) · Languages in the app: Español, English, Français, Deutsch, Italiano ([help translating](TRANSLATING.md))
 
 ---
@@ -61,7 +63,7 @@ No Android Studio or Gradle needed: `build-local/build_apk.sh` builds the APK wi
 Racoon AgroMapper is free software under the **GNU GPL v3.0** ([LICENSE](LICENSE)). Third-party components and their licences are listed in [NOTICE.md](NOTICE.md).
 
 ### Support the project
-If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffee ☕ — link coming soon.
+If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffee: **[☕ PayPal](https://www.paypal.me/JMorenoChirveches)**
 
 ---
 
@@ -98,7 +100,7 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
 Software libre bajo **GNU GPL v3.0** ([LICENSE](LICENSE)). Los componentes de terceros y sus licencias están en [NOTICE.md](NOTICE.md).
 
 ### Apoya el proyecto
-Si la app rescata tu Bluegrass o tu Disco del cajón, puedes invitarme a un café ☕ (enlace próximamente).
+Si la app rescata tu Bluegrass o tu Disco del cajón, puedes invitarme a un café: **[☕ PayPal](https://www.paypal.me/JMorenoChirveches)**
 
 ---
 Made by [Racoon Air](https://racoon-air.com) · Hecho a cuatro manos con Claude.
