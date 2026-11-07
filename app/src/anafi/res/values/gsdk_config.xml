@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Configuración de GroundSDK 1.8 (valores tomados de Pix4Dcapture, con la nube de Parrot desactivada) -->
+<resources>
+    <bool name="gsdk_auto_connection_at_startup">false</bool>
+    <bool name="gsdk_auto_select_wifi_country">true</bool>
+    <bool name="gsdk_blackbox_enabled">false</bool>
+    <bool name="gsdk_ble_enabled">false</bool>
+    <bool name="gsdk_crash_report_enabled">false</bool>
+    <bool name="gsdk_dev_toolbox_enabled">false</bool>
+    <bool name="gsdk_ephemeris_sync_enabled">true</bool>
+    <bool name="gsdk_firmware_enabled">false</bool>
+    <bool name="gsdk_flight_data_enabled">false</bool>
+    <bool name="gsdk_flight_log_enabled">false</bool>
+    <bool name="gsdk_gutma_log_enabled">false</bool>
+    <bool name="gsdk_rc_accessory_bootstrap_activity_enabled">true</bool>
+    <bool name="gsdk_usb_debug_enabled">false</bool>
+    <bool name="gsdk_usb_enabled">true</bool>
+    <bool name="gsdk_video_decoding_enabled">false</bool>
+    <bool name="gsdk_wifi_enabled">true</bool>
+    <integer name="arsdk_debug_usb_bridge_port">13579</integer>
+    <integer name="gsdk_blackbox_quota">0</integer>
+    <integer name="gsdk_crash_report_quota">0</integer>
+    <integer name="gsdk_flight_data_quota">0</integer>
+    <integer name="gsdk_flight_log_quota">0</integer>
+    <integer name="gsdk_gutma_log_quota">0</integer>
+    <integer name="gsdk_media_thumbnail_cache_size">0</integer>
+    <string name="gsdk_offline_settings_mode">OFF</string>
+    <string-array name="gsdk_supported_devices">
+        <item>SKY_CONTROLLER_3</item>
+        <item>SKY_CONTROLLER_UA</item>
+        <item>ANAFI_4K</item>
+        <item>ANAFI_THERMAL</item>
+        <item>ANAFI_UA</item>
+        <item>ANAFI_USA</item>
+    </string-array>
+    <string name="arsdk_debug_usb_bridge_address"></string>
+    <string name="gsdk_application_key"></string>
+    <string name="gsdk_blackbox_public_folder"></string>
+    <string name="gsdk_firmware_server"></string>
+    <string name="gsdk_reverse_geocoder_default_country_code"></string>
+</resources>

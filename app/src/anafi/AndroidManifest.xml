@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.usb.accessory" android:required="false" />
+
+    <application
+        android:label="Racoon AgroMapper ANAFI"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:extractNativeLibs="true"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name="com.racoonair.mapper.MainActivity"
+            android:exported="true"
+            android:screenOrientation="fullUser"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.racoonair.mapper.PlannerActivity"
+            android:exported="false"
+            android:screenOrientation="fullUser"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+
+        <!-- GroundSDK 1.8 (ANAFI): motor ARSDK y arranque por USB del SkyController 3 -->
+        <meta-data
+            android:name="com.parrot.drone.groundsdk.engine.arsdkengine"
+            android:value="com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine" />
+        <activity
+            android:name="com.parrot.drone.groundsdk.internal.RcAccessoryBootstrapActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:enabled="@bool/gsdk_rc_accessory_bootstrap_activity_enabled"
+            android:exported="true"
+            android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
+                android:resource="@xml/gsdk_usb_rc_filter" />
+        </activity>
+    </application>
+</manifest>

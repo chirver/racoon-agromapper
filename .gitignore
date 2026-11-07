@@ -1,0 +1,19 @@
+# Build output
+build/
+build-local/out/
+.gradle/
+*.apk
+*.aab
+*.ap_
+
+# Signing keys (never commit)
+*.keystore
+*.jks
+keystore.properties
+
+# IDE / local
+.idea/
+*.iml
+local.properties
+.DS_Store
+captures/
