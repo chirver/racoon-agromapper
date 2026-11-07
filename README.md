@@ -38,7 +38,18 @@
 | Parrot Disco FPV / Disco-Pro AG + Sequoia | SkyController 2 (USB) / WiFi | 🧪 ground-tested features; fixed-wing missions not flown yet |
 | Parrot ANAFI (Thermal / 4K / USA) | SkyController 3 | 🧪 separate build (`anafi` flavour), early stage |
 
-Phone: Android 8.0+ (tested on Android 12).
+### Android compatibility
+| | |
+|---|---|
+| **Minimum** | Android 8.0 (API 26) |
+| **Tested** | Android 12 (Xiaomi Redmi Note 9S) |
+| **Should work** | Android 8 – 15. Built for API 29, which current Android versions still install. |
+| **CPU** | ARM 64-bit (arm64-v8a) or 32-bit (armeabi-v7a), i.e. practically every phone. Not x86 emulators. |
+| **SkyController 2 by USB** | The phone must support USB host/accessory (OTG). Most phones do. |
+| **Sequoia over WiFi (Disco)** | Automatic connection needs **Android 10+**. On Android 8–9, join the Sequoia WiFi by hand first. |
+| **Maps, SIGPAC, weather** | Internet needed (mobile data works while connected to the drone). Downloaded maps work offline. |
+
+Android may warn that the app is "unrecognised" (Play Protect) because it is not from the Play Store. Choose *Install anyway*.
 
 ### Install
 **[⬇ Download RacoonAgroMapper-0.12.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.apk)**, open it on the phone and allow installing from unknown sources. Older and newer builds: [`dist/`](dist) and [Releases](../../releases).
@@ -71,6 +82,14 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
   - **Semáforo de meteo y Kp** según el dron (Open-Meteo + NOAA), con el viento a la altura de vuelo.
 - **Mapas sin conexión**: ortofoto PNOA del IGN (CC BY 4.0), descargable para el campo sin cobertura.
 - Registro de vuelo (CSV), exportación KML y diagnóstico.
+
+### Compatibilidad con Android
+- **Mínimo:** Android 8.0. **Probado:** Android 12 (Xiaomi Redmi Note 9S). Debería funcionar de Android 8 a 15.
+- **Procesador:** ARM de 64 o 32 bits, es decir, prácticamente todos los móviles. No funciona en emuladores x86.
+- **SkyController 2 por USB:** el móvil tiene que admitir USB OTG/accesorio, como hacen la mayoría.
+- **Sequoia por WiFi (Disco):** la conexión automática necesita **Android 10 o superior**. En Android 8 y 9 hay que conectarse a mano a su WiFi antes.
+- **Mapas, SIGPAC y meteo:** necesitan internet; los datos móviles sirven aunque estés conectado al dron. Los mapas descargados funcionan sin conexión.
+- Android puede avisar de «app no reconocida» (Play Protect) porque no viene de la Play Store: pulsa *Instalar de todas formas*.
 
 ### Instalar
 **[⬇ Descargar RacoonAgroMapper-0.12.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.apk)**, ábrelo en el móvil y permite instalar apps de origen desconocido.

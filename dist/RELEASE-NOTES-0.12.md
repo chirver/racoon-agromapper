@@ -24,4 +24,7 @@
 
 ⚠️ El modo Bluegrass ya ha volado. **Las misiones de Disco aún NO se han volado**: pruébalas primero en tierra y ten el SkyController a mano. Uso bajo tu responsabilidad, sin garantía (GPL-3.0).
 
+**Android:** 8.0+ (tested on 12) · ARM phones · automatic Sequoia WiFi needs Android 10+.
+**Android:** 8.0 o superior (probada en 12) · móviles ARM · la WiFi automática de la Sequoia necesita Android 10+.
+
 **Install / Instalar:** download `RacoonAgroMapper-0.12.apk`, open it on the phone and allow unknown sources. Android 8+. / Descarga el APK, ábrelo en el móvil y permite orígenes desconocidos.
