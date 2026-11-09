@@ -28,3 +28,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 ## 0.13.4
 - Primer arranque con conexión real (SkyController 3).
 - Vídeo en directo con el visor de GroundSDK y botón RGB / térmica (ANAFI Thermal, paleta hierro).
+
+## 0.13.5
+- RGB / térmica cambia de cámara (modo térmico STANDARD / DISABLED, como FreeFlight 6) y reengancha el vídeo.

@@ -164,7 +164,12 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         droneRefs += d.getPeripheral(ThermalControl::class.java) { t ->
             val first = thermal == null && t != null
             thermal = t
-            if (first) applyThermalView()
+            if (t != null) {
+                val m = t.mode().value
+                if (first) { thermalOn = m != ThermalControl.Mode.DISABLED; log("Térmica: modo $m (disponibles ${t.mode().availableValues})") }
+                else if (m != lastThermalMode) log("Térmica: modo → $m")
+                lastThermalMode = m
+            }
             changed()
         }
         droneRefs += d.getPeripheral(StreamServer::class.java) { s ->
@@ -172,8 +177,8 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             if (!s.streamingEnabled()) s.enableStreaming(true)
             if (liveRef == null) liveRef = s.live { cl -> live = cl; bindStream() }
         }
-        droneRefs += d.getPeripheral(MainCamera::class.java) { c -> mainCam = c }
-        droneRefs += d.getPeripheral(ThermalCamera::class.java) { c -> thermalCam = c }
+        droneRefs += d.getPeripheral(MainCamera::class.java) { c -> mainCam = c; camActive("RGB", c?.isActive) }
+        droneRefs += d.getPeripheral(ThermalCamera::class.java) { c -> thermalCam = c; camActive("térmica", c?.isActive) }
     }
 
     private fun onState(st: DeviceState?) {
@@ -379,6 +384,18 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private var live: CameraLive? = null
     private var videoOn = false
     private var thermalOn = true
+    private var lastThermalMode: ThermalControl.Mode? = null
+    private val camState = HashMap<String, Boolean?>()
+    /** Al cambiar la cámara activa el vídeo cambia de fuente: lo registramos y reenganchamos el stream. */
+    private fun camActive(name: String, active: Boolean?) {
+        if (camState[name] == active) return
+        camState[name] = active
+        if (active == true) { log("Cámara activa: $name"); restartStream() }
+    }
+    private fun restartStream() {
+        val l = live ?: return
+        main.postDelayed({ try { if (videoOn) { l.stop(); l.play() } } catch (_: Throwable) {} }, 500)
+    }
 
     override fun createStreamView(ctx: Context): android.view.View {
         releaseStreamView()
@@ -412,9 +429,14 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     override fun setThermalView(on: Boolean) { thermalOn = on; applyThermalView() }
 
     private fun applyThermalView() {
-        val th = thermal ?: return
+        val th = thermal ?: run { log("Este dron no tiene cámara térmica."); return }
         try {
-            if (th.mode().value != ThermalControl.Mode.STANDARD) th.mode().value = ThermalControl.Mode.STANDARD
+            // Como FreeFlight 6: térmica = modo STANDARD (cámara térmica activa); RGB = DISABLED (cámara principal).
+            // Al iniciar una misión prepareCamera() vuelve a STANDARD para sacar las dos fotos.
+            val want = if (thermalOn) ThermalControl.Mode.STANDARD else ThermalControl.Mode.DISABLED
+            val avail = th.mode().availableValues
+            if (want in avail || avail.isEmpty()) { if (th.mode().value != want) th.mode().value = want }
+            else log("Térmica: el dron no ofrece el modo $want (disponibles $avail)")
             th.sendPalette(IronPalette)
             th.sendRendering(object : ThermalControl.Rendering {
                 override fun getMode() = if (thermalOn) ThermalControl.Rendering.Mode.THERMAL else ThermalControl.Rendering.Mode.VISIBLE
@@ -468,7 +490,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     /** Térmica en STANDARD (fotos RGB + térmica) y cámara en foto JPEG sencilla, igual que Pix4Dcapture. */
     private fun prepareCamera() {
         thermal?.let { th ->
-            try { if (th.mode().value != ThermalControl.Mode.STANDARD) { th.mode().value = ThermalControl.Mode.STANDARD; log("Cámara térmica activada (modo estándar).") } }
+            try { if (th.mode().value != ThermalControl.Mode.STANDARD) { th.mode().value = ThermalControl.Mode.STANDARD; thermalOn = true; log("Cámara térmica activada (modo estándar).") } }
             catch (t: Throwable) { log("No se pudo activar la térmica: ${t.message}") }
         }
         for (cam in listOfNotNull(mainCam, thermalCam)) try {
