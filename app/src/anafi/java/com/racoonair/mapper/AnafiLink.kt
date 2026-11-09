@@ -431,10 +431,11 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun applyThermalView() {
         val th = thermal ?: run { log("Este dron no tiene cámara térmica."); return }
         try {
-            // Como FreeFlight 6: térmica = modo STANDARD (cámara térmica activa); RGB = DISABLED (cámara principal).
-            // Al iniciar una misión prepareCamera() vuelve a STANDARD para sacar las dos fotos.
-            val want = if (thermalOn) ThermalControl.Mode.STANDARD else ThermalControl.Mode.DISABLED
+            // STANDARD manda la térmica en bruto y el coloreado lo hace la app (FreeFlight lleva una librería
+            // propia para eso que GroundSDK no trae): por eso se seguía viendo RGB. EMBEDDED = el dron colorea
+            // la térmica dentro del vídeo con la paleta que le mandamos. RGB = DISABLED.
             val avail = th.mode().availableValues
+            val want = if (!thermalOn) ThermalControl.Mode.DISABLED else thermalOnMode(avail)
             if (want in avail || avail.isEmpty()) { if (th.mode().value != want) th.mode().value = want }
             else log("Térmica: el dron no ofrece el modo $want (disponibles $avail)")
             th.sendPalette(IronPalette)
@@ -445,6 +446,9 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             log(if (thermalOn) "Vídeo: cámara térmica" else "Vídeo: cámara RGB")
         } catch (t: Throwable) { log("Térmica: ${t.javaClass.simpleName}: ${t.message}") }
     }
+
+    private fun thermalOnMode(avail: Set<ThermalControl.Mode>) =
+        if (ThermalControl.Mode.EMBEDDED in avail) ThermalControl.Mode.EMBEDDED else ThermalControl.Mode.STANDARD
 
     /** Paleta «hierro» relativa: frío negro/azul → caliente amarillo/blanco, escala automática. */
     private object IronPalette : ThermalControl.RelativePalette {
@@ -490,7 +494,11 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     /** Térmica en STANDARD (fotos RGB + térmica) y cámara en foto JPEG sencilla, igual que Pix4Dcapture. */
     private fun prepareCamera() {
         thermal?.let { th ->
-            try { if (th.mode().value != ThermalControl.Mode.STANDARD) { th.mode().value = ThermalControl.Mode.STANDARD; thermalOn = true; log("Cámara térmica activada (modo estándar).") } }
+            // Cualquier modo encendido (EMBEDDED o STANDARD) saca foto RGB + térmica; solo hay que evitar DISABLED.
+            try { if (th.mode().value == ThermalControl.Mode.DISABLED) {
+                val m = thermalOnMode(th.mode().availableValues); th.mode().value = m; thermalOn = true
+                log("Cámara térmica activada ($m)."); applyThermalView()
+            } }
             catch (t: Throwable) { log("No se pudo activar la térmica: ${t.message}") }
         }
         for (cam in listOfNotNull(mainCam, thermalCam)) try {

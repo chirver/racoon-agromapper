@@ -31,3 +31,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ## 0.13.5
 - RGB / térmica cambia de cámara (modo térmico STANDARD / DISABLED, como FreeFlight 6) y reengancha el vídeo.
+
+## 0.13.6
+- Térmica en vídeo con el modo EMBEDDED (el dron colorea la térmica en el vídeo); STANDARD necesita un procesado en el móvil que GroundSDK no incluye.
