@@ -48,6 +48,10 @@ interface Link {
     val hasThermal: Boolean get() = false
     val thermalView: Boolean get() = false
     fun setThermalView(on: Boolean) {}
+    /** Reenviar la paleta según [Session.thermal]. */
+    fun applyThermalPrefs() {}
+    /** Copia del fotograma que se ve (para leer temperaturas). false si no se puede ahora. */
+    fun captureFrame(cb: (android.graphics.Bitmap?) -> Unit): Boolean = false
 }
 
 /** Opciones del desplegable de conexión. */

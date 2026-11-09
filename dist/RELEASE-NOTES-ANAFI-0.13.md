@@ -34,3 +34,9 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ## 0.13.6
 - Térmica en vídeo con el modo EMBEDDED (el dron colorea la térmica en el vídeo); STANDARD necesita un procesado en el móvil que GroundSDK no incluye.
+
+## 0.14 — térmica de trabajo
+- Paletas: absoluta (colores = °C fijos, lectura de máx y centro en pantalla), búsqueda (solo lo que supera el umbral, en rojo) y relativa.
+- Detector de puntos calientes para búsqueda y rescate: pita, guarda la imagen y marca la posición en el mapa y en el KML.
+- Mosaico térmico: paleta fija durante la misión y calibración del sensor en cada giro (nunca a mitad de pasada); aviso en el planificador si el solape o la velocidad no valen para térmica.
+- Reanudar tras cambio de batería verificado para cuadrículas ANAFI.

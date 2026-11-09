@@ -47,6 +47,10 @@ object Session {
     var fixedWing = FixedWing()
     /** Tipo de misión y parámetros 3D (ANAFI). */
     var spec3D = Spec3D()
+    /** Térmica (ANAFI Thermal): paleta, aviso de puntos calientes y ajustes de mosaico. */
+    var thermal = ThermalPrefs()
+    /** Puntos calientes detectados en esta sesión (búsqueda y rescate). */
+    val hotspots = ArrayList<Hotspot>()
     var zoneName = ""
 
     fun setPlan(p: FlightPlan, name: String) {

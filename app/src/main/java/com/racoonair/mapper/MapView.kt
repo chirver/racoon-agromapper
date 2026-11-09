@@ -96,6 +96,10 @@ class MapView(ctx: Context) : View(ctx) {
     var showSigpac = false; set(v) { field = v; invalidate() }
     /** Recinto resaltado (p. ej. el SIGPAC recién consultado). */
     var highlight: List<LatLon> = emptyList(); set(v) { field = v; invalidate() }
+    /** Puntos calientes detectados por la térmica (búsqueda y rescate). */
+    var hotspots: List<LatLon> = emptyList(); set(v) { field = v; invalidate() }
+    private val hotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF1744.toInt() }
+    private val hotRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 4f }
     private val filesDir = ctx.filesDir
     private val hlPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF00E5FF.toInt(); style = Paint.Style.STROKE; strokeWidth = 6f }
     private val hlFill = Paint().apply { color = 0x3300E5FF; style = Paint.Style.FILL }
@@ -455,6 +459,12 @@ class MapView(ctx: Context) : View(ctx) {
         textPaint.color = Color.WHITE; textPaint.textSize = 34f
         phone?.let { val s = toScreen(it); canvas.drawCircle(s[0], s[1], 14f, phonePaint) }
         home?.let { val s = toScreen(it); canvas.drawCircle(s[0], s[1], 26f, homePaint); canvas.drawText("H", s[0], s[1] + 12f, textPaint) }
+        hotspots.forEachIndexed { i, p ->
+            val s = toScreen(p)
+            canvas.drawCircle(s[0], s[1], 18f, hotPaint); canvas.drawCircle(s[0], s[1], 18f, hotRingPaint)
+            canvas.drawText("${i + 1}", s[0], s[1] + 9f, textPaint.apply { textSize = 22f })
+        }
+        textPaint.textSize = 34f
         drone?.let {
             val s = toScreen(it)
             canvas.drawCircle(s[0], s[1], 20f, dronePaint)

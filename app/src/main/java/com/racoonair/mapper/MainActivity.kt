@@ -16,6 +16,10 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -79,6 +83,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         val existing = Session.link
         link = existing ?: Flavor.newLink(Flavor.platforms.first(), applicationContext, this).also { Session.link = it }
         link.listener = this
+        loadThermalPrefs()
         setContentView(buildUi())
         if (existing == null && !Flavor.supports(Platform.BLUEGRASS_SEQUOIA)) {
             onLog(tr("Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar."))
@@ -247,6 +252,13 @@ class MainActivity : Activity(), DroneLink.Listener {
     private lateinit var videoTab: Button
     private lateinit var tabsRow: View
     private lateinit var thermalTab: Button
+    private lateinit var thermalCfgTab: Button
+    private lateinit var thermalOverlay: ThermalOverlay
+    private val scanHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var scanBusy = false
+    @Volatile private var wasHot = false
+    private var lastPlanPlaying = false
+    private val scanExec = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var streamView: View? = null
 
     private fun setViewMode(video: Boolean) {
@@ -258,6 +270,8 @@ class MainActivity : Activity(), DroneLink.Listener {
         videoBox.visibility = if (video) View.VISIBLE else View.GONE
         followBtn.isEnabled = !video
         thermalTab.visibility = if (link.hasThermal) View.VISIBLE else View.GONE
+        thermalCfgTab.visibility = thermalTab.visibility
+        updateThermalOverlay()
         thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB")
         // Enlaces con visor propio (GroundSDK): se pone en lugar del VideoView.
         if (video && streamView == null) link.createStreamView(this)?.let { v ->
@@ -283,7 +297,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         val fresh = link.streamAlive() ?: (System.currentTimeMillis() - videoView.lastFrameAt < 2000)
         if (::thermalTab.isInitialized) {
             val vis = if (link.hasThermal) View.VISIBLE else View.GONE
-            if (thermalTab.visibility != vis) thermalTab.visibility = vis
+            if (thermalTab.visibility != vis) { thermalTab.visibility = vis; thermalCfgTab.visibility = vis; updateThermalOverlay() }
         }
         videoWait.visibility = if (fresh) View.GONE else View.VISIBLE
         videoWait.text = if (!link.isConnected) tr("Conecta el dron para ver el vídeo") else tr("Esperando vídeo…")
@@ -302,6 +316,149 @@ class MainActivity : Activity(), DroneLink.Listener {
             .setNegativeButton(tr("Cancelar"), null)
             .setPositiveButton(tr("Aplicar")) { _, _ -> link.setReturnHomeOnDisconnect(turnOn) }
             .show()
+    }
+
+    // ---------------------------------------------------------------- térmica: lectura y puntos calientes
+
+    private fun loadThermalPrefs() {
+        val s = prefs.getString("thermal", null) ?: return
+        try {
+            val o = org.json.JSONObject(s); val d = ThermalPrefs()
+            Session.thermal = ThermalPrefs(
+                mode = runCatching { ThermalPaletteMode.valueOf(o.optString("mode")) }.getOrDefault(d.mode),
+                min = o.optDouble("min", d.min), max = o.optDouble("max", d.max), threshold = o.optDouble("threshold", d.threshold),
+                alert = o.optBoolean("alert", d.alert), alertTemp = o.optDouble("alertTemp", d.alertTemp),
+                missionLock = o.optBoolean("missionLock", d.missionLock), missionMin = o.optDouble("missionMin", d.missionMin),
+                missionMax = o.optDouble("missionMax", d.missionMax), ffcPerPass = o.optBoolean("ffcPerPass", d.ffcPerPass))
+        } catch (_: Exception) {}
+    }
+
+    private fun saveThermalPrefs() {
+        val t = Session.thermal
+        prefs.edit().putString("thermal", org.json.JSONObject().apply {
+            put("mode", t.mode.name); put("min", t.min); put("max", t.max); put("threshold", t.threshold)
+            put("alert", t.alert); put("alertTemp", t.alertTemp); put("missionLock", t.missionLock)
+            put("missionMin", t.missionMin); put("missionMax", t.missionMax); put("ffcPerPass", t.ffcPerPass)
+        }.toString()).apply()
+    }
+
+    private fun thermalActive() = link.hasThermal && link.thermalView && ::videoBox.isInitialized && videoBox.visibility == View.VISIBLE
+
+    private fun updateThermalOverlay() {
+        if (!::thermalOverlay.isInitialized) return
+        val on = thermalActive()
+        thermalOverlay.visibility = if (on) View.VISIBLE else View.GONE
+        val t = Session.thermal
+        val inMission = link.telemetry.planPlaying && t.missionLock
+        thermalOverlay.prefs = if (inMission) t.copy(mode = ThermalPaletteMode.ABSOLUTE, min = t.missionMin, max = t.missionMax) else t
+        thermalOverlay.note = if (inMission) trf("Paleta fija de misión %1\$s–%2\$s °C", t.missionMin.toInt(), t.missionMax.toInt()) else ""
+        if (!on) thermalOverlay.result = null
+    }
+
+    /** Cada ~0,7 s: copia del fotograma, lectura de temperaturas y aviso si hay algo caliente. */
+    private val scanTick: Runnable = object : Runnable {
+        override fun run() {
+            scanHandler.postDelayed(this, 700)
+            if (scanBusy || !thermalActive()) return
+            val pr = thermalOverlay.prefs
+            if (pr.mode == ThermalPaletteMode.RELATIVE) return
+            scanBusy = link.captureFrame { bmp ->
+                if (bmp == null) { scanBusy = false; return@captureFrame }
+                scanExec.execute {
+                    val r = try { ThermalScan.analyze(bmp, pr) } catch (_: Throwable) { null }
+                    // Aviso solo al APARECER algo caliente (no en cada fotograma mientras siga a la vista).
+                    val fire = r != null && r.hot && !wasHot
+                    wasHot = r?.hot == true
+                    val jpg = if (fire) saveHotJpeg(bmp) else null
+                    bmp.recycle()
+                    runOnUiThread {
+                        scanBusy = false
+                        if (isDestroyed || r == null || !thermalActive()) return@runOnUiThread
+                        thermalOverlay.result = r
+                        if (fire) onHotspot(r, jpg)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Foto de la prueba (lo que se veía), con la hora en el nombre. Se llama desde el hilo de análisis. */
+    private fun saveHotJpeg(bmp: android.graphics.Bitmap): String? = try {
+        val dir = java.io.File(getExternalFilesDir(null), "puntos_calientes").apply { mkdirs() }
+        val f = java.io.File(dir, "caliente_" + java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(java.util.Date()) + ".jpg")
+        f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) }
+        f.absolutePath
+    } catch (_: Exception) { null }
+
+    private fun onHotspot(r: ThermalScan.Result, file: String?) {
+        val t = link.telemetry
+        alarm(strong = false)
+        val pos = dronePos(t)
+        if (pos == null || !t.gpsFix) {
+            onLog(tr("🔥 Punto caliente a la vista, pero el dron no tiene GPS: no se puede marcar en el mapa."))
+            return
+        }
+        // Mismo sitio que uno ya marcado (< 25 m): solo pita, no duplica la marca.
+        if (Session.hotspots.any { GridPlanner.distance(LatLon(it.lat, it.lon), pos) < 25.0 }) return
+        val now = System.currentTimeMillis()
+        val h = Hotspot(pos.lat, pos.lon, t.altitude, r.maxC, now, file)
+        Session.hotspots.add(h)
+        flightMap.hotspots = Session.hotspots.map { LatLon(it.lat, it.lon) }
+        onLog(trf("🔥 Punto caliente %1\$s: %2\$s, %3\$s (alt %4\$s m). Está bajo el dron o por delante, según la cámara.",
+            Session.hotspots.size, r.maxC?.let { "%.1f °C".format(it) } ?: ">" + "%.0f °C".format(Session.thermal.threshold),
+            "%.6f".format(java.util.Locale.ROOT, pos.lat) + ", " + "%.6f".format(java.util.Locale.ROOT, pos.lon), if (t.altitude.isNaN()) "—" else "%.0f".format(t.altitude)))
+    }
+
+    private fun thermalDialog() {
+        val t = Session.thermal
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
+        fun num(lbl: String, v: Double): EditText {
+            box.addView(TextView(this).apply { text = lbl; setTextColor(C_DIM); textSize = 12f })
+            return EditText(this).apply {
+                setText(if (v == Math.floor(v)) v.toInt().toString() else v.toString())
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
+                box.addView(this)
+            }
+        }
+        fun chk(lbl: String, v: Boolean) = CheckBox(this).apply { text = lbl; isChecked = v; box.addView(this) }
+        box.addView(TextView(this).apply { text = tr("Vídeo térmico"); setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD) })
+        val modes = listOf(ThermalPaletteMode.ABSOLUTE to tr("Absoluta: colores = °C fijos (lee temperaturas)"),
+            ThermalPaletteMode.SEARCH to tr("Búsqueda: solo lo que pase del umbral, en rojo"),
+            ThermalPaletteMode.RELATIVE to tr("Relativa: máximo contraste, sin temperaturas"))
+        val rg = RadioGroup(this)
+        modes.forEachIndexed { i, (m, l) -> rg.addView(RadioButton(this).apply { id = 100 + i; text = l; isChecked = t.mode == m }) }
+        box.addView(rg)
+        val eMin = num(tr("Absoluta: mínimo (°C)"), t.min)
+        val eMax = num(tr("Absoluta: máximo (°C)"), t.max)
+        val eThr = num(tr("Búsqueda: umbral (°C). Persona al aire libre: 28–32"), t.threshold)
+        val cAlert = chk(tr("Avisar y marcar en el mapa los puntos calientes"), t.alert)
+        val eAlert = num(tr("Absoluta: avisar a partir de (°C)"), t.alertTemp)
+        box.addView(TextView(this).apply { text = tr("Misión (mosaico térmico)"); setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(12), 0, 0) })
+        val cLock = chk(tr("Paleta fija durante la misión (mismos colores en todas las fotos)"), t.missionLock)
+        val eMMin = num(tr("Misión: mínimo (°C)"), t.missionMin)
+        val eMMax = num(tr("Misión: máximo (°C)"), t.missionMax)
+        val cFfc = chk(tr("Calibrar el sensor en cada giro (no a mitad de pasada)"), t.ffcPerPass)
+        box.addView(TextView(this).apply {
+            setTextColor(C_DIM); textSize = 12f; setPadding(0, dp(8), 0, 0)
+            text = tr("La lectura en pantalla es aproximada (±2–3 °C): sirve para encontrar personas, animales o rescoldos, no para medir con certificado. Para un mosaico, elige un rango que cubra todo el terreno (p. ej. 0–40 °C en verano a primera hora).")
+        })
+        AlertDialog.Builder(this).setTitle(tr("Térmica")).setView(ScrollView(this).apply { addView(box) })
+            .setNegativeButton(tr("Cancelar"), null)
+            .setNeutralButton(tr("Borrar puntos")) { _, _ -> Session.hotspots.clear(); flightMap.hotspots = emptyList(); onLog(tr("Puntos calientes borrados.")) }
+            .setPositiveButton(tr("Aplicar")) { _, _ ->
+                fun v(e: EditText, d: Double) = e.text.toString().replace(',', '.').toDoubleOrNull() ?: d
+                val lo = v(eMin, t.min).coerceIn(-40.0, 395.0); val hi = v(eMax, t.max).coerceIn(lo + 5, 400.0)
+                val mlo = v(eMMin, t.missionMin).coerceIn(-40.0, 395.0); val mhi = v(eMMax, t.missionMax).coerceIn(mlo + 5, 400.0)
+                val at = v(eAlert, t.alertTemp)
+                if (at < lo || at >= hi) Toast.makeText(this, trf("El aviso (%1\$s °C) debe estar dentro del rango %2\$s–%3\$s °C o nunca saltará.", at.toInt(), lo.toInt(), hi.toInt()), Toast.LENGTH_LONG).show()
+                Session.thermal = t.copy(mode = modes.getOrNull(rg.checkedRadioButtonId - 100)?.first ?: t.mode,
+                    min = lo, max = hi, threshold = v(eThr, t.threshold).coerceIn(-20.0, 400.0),
+                    alert = cAlert.isChecked, alertTemp = at, missionLock = cLock.isChecked,
+                    missionMin = mlo, missionMax = mhi, ffcPerPass = cFfc.isChecked)
+                saveThermalPrefs()
+                link.applyThermalPrefs()
+                updateThermalOverlay()
+            }.show()
     }
 
     private fun alarm(strong: Boolean) {
@@ -376,7 +533,10 @@ class MainActivity : Activity(), DroneLink.Listener {
         val f = FlightRecorder.lastFlight(this)
         var name = planName.ifEmpty { "plan" }
         if (f != null) { d.line(trf("Vuelo %1\$s", f.name.removeSuffix(".csv")), KmlExport.trackFromCsv(f), "vuelo"); name = "vuelo ${f.name.removeSuffix(".csv")}" }
-        if (plan == null && f == null) { Toast.makeText(this, tr("No hay plan ni vuelos que exportar"), Toast.LENGTH_SHORT).show(); return }
+        for ((i, h) in Session.hotspots.withIndex())
+            d.point(trf("Punto caliente %1\$s · %2\$s · %3\$s", i + 1, h.tempC?.let { "%.1f °C".format(it) } ?: "—",
+                java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT).format(java.util.Date(h.time))), LatLon(h.lat, h.lon), "caliente")
+        if (plan == null && f == null && Session.hotspots.isEmpty()) { Toast.makeText(this, tr("No hay plan ni vuelos que exportar"), Toast.LENGTH_SHORT).show(); return }
         KmlExport.saveAndShare(this, name, d.build())
     }
 
@@ -454,8 +614,16 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        scanHandler.removeCallbacksAndMessages(null)
+    }
+
     override fun onResume() {
         super.onResume()
+        scanHandler.removeCallbacksAndMessages(null)
+        scanHandler.postDelayed(scanTick, 1000)
+        if (::flightMap.isInitialized) flightMap.hotspots = Session.hotspots.map { LatLon(it.lat, it.lon) }
         if (Session.planVersion != shownPlanVersion) {
             shownPlanVersion = Session.planVersion
             plan?.let { showPlan(it); onLog(trf("Plan listo: %1\$s (%2\$s ítems, estimado %3\$s min). Pulsa «Subir al dron».", planName, it.items.size, "%.1f".format(Session.plannerEstimateS / 60))) }
@@ -479,6 +647,8 @@ class MainActivity : Activity(), DroneLink.Listener {
     }
 
     override fun onDestroy() {
+        scanHandler.removeCallbacksAndMessages(null)
+        scanExec.shutdown()
         flightMap.release() // la vista es de esta pantalla; el rastro vive en Session
         rthDialog?.dismiss(); rthDialog = null
         // Esta pantalla muere: que el enlace no le mande más telemetría (ni abra diálogos sobre ella).
@@ -636,8 +806,10 @@ class MainActivity : Activity(), DroneLink.Listener {
         thermalTab = button(tr("🌡 Térmica"), C_GREY) {
             link.setThermalView(!link.thermalView)
             thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB")
+            updateThermalOverlay()
         }.apply { visibility = View.GONE }
-        tabsRow = row(mapTab, videoTab, thermalTab)
+        thermalCfgTab = button("🎚", C_GREY) { thermalDialog() }.apply { visibility = View.GONE }
+        tabsRow = row(mapTab, videoTab, thermalTab, thermalCfgTab)
         mc.addView(tabsRow)
         viewHolder = FrameLayout(this)
         flightMap = MapView(this)
@@ -654,6 +826,8 @@ class MainActivity : Activity(), DroneLink.Listener {
             setBackgroundColor(0x66000000)
         }
         videoBox.addView(osd, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP))
+        thermalOverlay = ThermalOverlay(this).apply { visibility = View.GONE }
+        videoBox.addView(thermalOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         viewHolder.addView(videoBox, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         mc.addView(viewHolder, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330)).apply { topMargin = dp(6) })
         root.addView(mc); mapCard = mc
@@ -1409,6 +1583,8 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun fmt(v: Double, digits: Int, unit: String) = if (v.isNaN()) "—" else "%.${digits}f %s".format(v, unit)
 
     override fun onTelemetry(t: DroneLink.Telemetry) {
+        // Al empezar/acabar la misión cambia la paleta del dron (fija de mosaico): la lectura tiene que seguirla.
+        if (t.planPlaying != lastPlanPlaying) { lastPlanPlaying = t.planPlaying; wasHot = false; updateThermalOverlay() }
         // Progreso: solo índices confirmados por el dron DESPUÉS de este VOLAR.
         if (Session.eventsAtStart >= 0 && link.missionItemEvents > Session.eventsAtStart && t.missionItem >= 0) Progress.record(this, t.missionItem)
         if (calibRequested && t.radioCalibResult >= 0 && t.radioCalibResult != lastCalibResult) {

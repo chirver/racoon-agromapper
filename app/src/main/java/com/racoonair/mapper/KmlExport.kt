@@ -38,6 +38,7 @@ object KmlExport {
 <Style id="zona"><LineStyle><color>ff84dc3d</color><width>3</width></LineStyle><PolyStyle><color>4032a852</color></PolyStyle></Style>
 <Style id="plan"><LineStyle><color>ff07c1ff</color><width>3</width></LineStyle></Style>
 <Style id="vuelo"><LineStyle><color>ff4417ff</color><width>4</width></LineStyle></Style>
+<Style id="caliente"><IconStyle><color>ff0000ff</color><scale>1.3</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/firedept.png</href></Icon></IconStyle></Style>
 <Style id="casa"><IconStyle><scale>1.2</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/H.png</href></Icon></IconStyle></Style>
 $sb</Document></kml>
 """

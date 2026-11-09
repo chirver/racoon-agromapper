@@ -115,6 +115,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun closeDrone() {
         droneRefs.forEach { try { it.close() } catch (_: Throwable) {} }
         droneRefs.clear(); drone = null; fp = null; rth = null; manual = null; thermal = null; model = null
+        thermalMission = false
         try { liveRef?.close() } catch (_: Throwable) {}
         liveRef = null; live = null; try { streamView?.setStream(null) } catch (_: Throwable) {}
         mainCam = null; thermalCam = null
@@ -166,7 +167,16 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             thermal = t
             if (t != null) {
                 val m = t.mode().value
-                if (first) { thermalOn = m != ThermalControl.Mode.DISABLED; log("Térmica: modo $m (disponibles ${t.mode().availableValues})") }
+                if (first) {
+                    thermalOn = m != ThermalControl.Mode.DISABLED
+                    log("Térmica: modo $m (disponibles ${t.mode().availableValues})")
+                    // Si una misión anterior la dejó en calibración manual (enlace perdido, app cerrada), devolverla.
+                    if (telemetry.planPlaying) onMissionThermalStart()
+                    else try {
+                        val cm = t.calibration()?.mode()
+                        if (cm != null && cm.value == ThermalControl.Calibration.Mode.MANUAL) { cm.value = ThermalControl.Calibration.Mode.AUTOMATIC; log("Térmica: calibración automática restaurada.") }
+                    } catch (_: Throwable) {}
+                }
                 else if (m != lastThermalMode) log("Térmica: modo → $m")
                 lastThermalMode = m
             }
@@ -266,6 +276,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         if (p == null) {
             // Dron desconectado: la interfaz desaparece; no dejar un estado "ejecutando" colgado.
             t.planAvailable = null; t.planStateRaw = -1; t.planPlaying = false; t.planState = "—"
+            thermalMission = false
             t.components.clear(); t.planError = ""
             changed(); return
         }
@@ -279,7 +290,10 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             p.isFlightPlanFileKnown -> 3
             else -> 1
         }
+        val wasPlaying = t.planPlaying
         t.planPlaying = t.planStateRaw == 0
+        if (wasPlaying && !t.planPlaying) onMissionThermalEnd()
+        if (!wasPlaying && t.planPlaying) onMissionThermalStart()
         t.planState = arrayOf("EJECUTANDO", "PARADO", "PAUSADO", "CARGADO").getOrElse(t.planStateRaw) { "—" }
         t.planAvailable = st != Activable.State.UNAVAILABLE
         val reasons = p.unavailabilityReasons
@@ -295,12 +309,16 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             else -> ""
         }
         val item = p.latestMissionItemExecuted
-        if (item >= 0 && item != lastMissionItem) { lastMissionItem = item; t.missionItem = item; missionItemEvents++ }
+        if (item >= 0 && item != lastMissionItem) {
+            lastMissionItem = item; t.missionItem = item; missionItemEvents++
+            // Mosaico térmico: calibrar al terminar cada pasada (durante el giro), nunca a mitad de pasada.
+            if (thermalMission && Session.thermal.ffcPerPass && planItems.firstOrNull { it.index == item }?.command == FlightPlan.CMD_IMAGE_STOP) calibrateThermal("fin de pasada")
+        }
         p.returnHomeOnDisconnect?.let { s -> t.rthOnDisconnect = if (s.isEnabled) 1 else 0; t.rthOnDisconnectReadOnly = !s.isMutable }
         // Subida en curso
         val cb = uploadDone
         if (cb != null) when (p.latestUploadState) {
-            FlightPlanPilotingItf.UploadState.UPLOADED -> { uploadDone = null; uploading = false; log("Plan subido."); prepareCamera(); cb(true) }
+            FlightPlanPilotingItf.UploadState.UPLOADED -> { uploadDone = null; uploading = false; planItems = pendingItems; log("Plan subido."); prepareCamera(); cb(true) }
             FlightPlanPilotingItf.UploadState.FAILED -> { uploadDone = null; uploading = false; log("ERROR: la subida del plan falló."); cb(false) }
             else -> {}
         }
@@ -340,6 +358,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         if (uploading) { log("Ya hay una subida en curso."); return }
         val f = File(ctx.cacheDir, PLAN_FILE)
         f.writeText(plan.text)
+        pendingItems = plan.items
         uploading = true
         uploadDone = done
         log("Subiendo plan (${f.length()} bytes)…")
@@ -423,6 +442,55 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         } catch (t: Throwable) { log("Vídeo: ${t.javaClass.simpleName}: ${t.message}") }
     }
 
+    // ---------------------------------------------------------------- termografía en misión
+
+    private var planItems: List<FlightPlan.Item> = emptyList()
+    private var pendingItems: List<FlightPlan.Item> = emptyList()
+    private var thermalMission = false
+
+    private fun onMissionThermalStart() {
+        val th = thermal ?: return
+        thermalMission = true
+        val pr = Session.thermal
+        // Calibración manual solo si sabemos dónde acaba cada pasada (plan subido en esta sesión).
+        if (pr.ffcPerPass && planItems.any { it.command == FlightPlan.CMD_IMAGE_STOP }) try {
+            val cm = th.calibration()?.mode()
+            if (cm != null && ThermalControl.Calibration.Mode.MANUAL in cm.availableValues) cm.value = ThermalControl.Calibration.Mode.MANUAL
+            calibrateThermal("inicio de misión")
+        } catch (t: Throwable) { log("Calibración térmica: ${t.message}") }
+        applyThermalView()
+        if (pr.missionLock) log("Térmica: paleta fija ${pr.missionMin.toInt()}–${pr.missionMax.toInt()} °C durante la misión (mosaico).")
+    }
+
+    private fun onMissionThermalEnd() {
+        if (!thermalMission) return
+        thermalMission = false
+        val th = thermal ?: return
+        try {
+            val cm = th.calibration()?.mode()
+            if (cm != null && cm.value != ThermalControl.Calibration.Mode.AUTOMATIC) cm.value = ThermalControl.Calibration.Mode.AUTOMATIC
+        } catch (_: Throwable) {}
+        applyThermalView()
+    }
+
+    private fun calibrateThermal(why: String) {
+        try { if (thermal?.calibration()?.calibrate() == true) log("Térmica calibrada ($why).") } catch (_: Throwable) {}
+    }
+
+    override fun applyThermalPrefs() = applyThermalView()
+
+    override fun captureFrame(cb: (android.graphics.Bitmap?) -> Unit): Boolean {
+        val v = streamView ?: return false
+        if (capturing || v.width < 50 || v.height < 50) return false
+        capturing = true
+        try {
+            v.capture { bmp -> main.post { capturing = false; cb(bmp) } }
+        } catch (t: Throwable) { capturing = false; return false }
+        main.postDelayed({ capturing = false }, 3000)
+        return true
+    }
+    @Volatile private var capturing = false
+
     // ANAFI Thermal: el dron mezcla las dos cámaras; elegimos qué se ve sin tocar la captura de fotos.
     override val hasThermal get() = thermal != null
     override val thermalView get() = thermalOn
@@ -438,7 +506,15 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             val want = if (!thermalOn) ThermalControl.Mode.DISABLED else thermalOnMode(avail)
             if (want in avail || avail.isEmpty()) { if (th.mode().value != want) th.mode().value = want }
             else log("Térmica: el dron no ofrece el modo $want (disponibles $avail)")
-            th.sendPalette(IronPalette)
+            val pr = Session.thermal
+            // En misión con paleta fija: rango de la misión (todas las fotos con los mismos colores).
+            val pal: ThermalControl.Palette = if (thermalMission && pr.missionLock) AbsPalette(pr.missionMin, pr.missionMax)
+                else when (pr.mode) {
+                    ThermalPaletteMode.ABSOLUTE -> AbsPalette(pr.min, pr.max)
+                    ThermalPaletteMode.SEARCH -> SearchPalette(pr.threshold)
+                    ThermalPaletteMode.RELATIVE -> IronPalette
+                }
+            th.sendPalette(pal)
             th.sendRendering(object : ThermalControl.Rendering {
                 override fun getMode() = if (thermalOn) ThermalControl.Rendering.Mode.THERMAL else ThermalControl.Rendering.Mode.VISIBLE
                 override fun getBlendingRate() = 0.0
@@ -450,17 +526,30 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun thermalOnMode(avail: Set<ThermalControl.Mode>) =
         if (ThermalControl.Mode.EMBEDDED in avail) ThermalControl.Mode.EMBEDDED else ThermalControl.Mode.STANDARD
 
-    /** Paleta «hierro» relativa: frío negro/azul → caliente amarillo/blanco, escala automática. */
+    private class C(val p: Double, val r: Double, val g: Double, val b: Double) : ThermalControl.Palette.Color {
+        override fun getPosition() = p; override fun getRed() = r; override fun getGreen() = g; override fun getBlue() = b
+    }
+    private fun colorsOf(stops: List<ThermalPalettes.Stop>): Collection<ThermalControl.Palette.Color> = stops.map { C(it.pos, it.r, it.g, it.b) }
+
+    /** Paleta «hierro» relativa: escala automática según lo que haya en imagen (sin temperaturas). */
     private object IronPalette : ThermalControl.RelativePalette {
-        private class C(val p: Double, val r: Double, val g: Double, val b: Double) : ThermalControl.Palette.Color {
-            override fun getPosition() = p; override fun getRed() = r; override fun getGreen() = g; override fun getBlue() = b
-        }
-        private val colors = listOf(C(0.0, 0.0, 0.0, 0.0), C(0.2, 0.2, 0.0, 0.55), C(0.45, 0.7, 0.0, 0.5),
-            C(0.7, 1.0, 0.45, 0.0), C(0.9, 1.0, 0.85, 0.1), C(1.0, 1.0, 1.0, 1.0))
-        override fun getColors(): Collection<ThermalControl.Palette.Color> = colors
+        override fun getColors(): Collection<ThermalControl.Palette.Color> = ThermalPalettes.IRON.map { C(it.pos, it.r, it.g, it.b) }
         override fun getLowestTemperature() = 0.0
         override fun getHighestTemperature() = 1.0
         override fun isLocked() = false
+    }
+    /** Paleta «hierro» absoluta: cada color es siempre la misma temperatura (lectura en pantalla y mosaicos). */
+    private inner class AbsPalette(val lo: Double, val hi: Double) : ThermalControl.AbsolutePalette {
+        override fun getColors() = colorsOf(ThermalPalettes.IRON)
+        override fun getLowestTemperature() = lo + 273.15
+        override fun getHighestTemperature() = hi + 273.15
+        override fun getColorizationMode() = ThermalControl.AbsolutePalette.ColorizationMode.EXTENDED
+    }
+    /** Búsqueda: solo se colorea lo que pase del umbral; el resto queda en gris. */
+    private inner class SearchPalette(val thr: Double) : ThermalControl.SpotPalette {
+        override fun getColors() = colorsOf(ThermalPalettes.SPOT)
+        override fun getThreshold() = thr + 273.15
+        override fun getType() = ThermalControl.SpotPalette.SpotType.HOT
     }
 
     override fun returnHome() { val ok = rth?.activate(); log(if (ok == true) "Volver a casa ✓" else "Volver a casa rechazado") }

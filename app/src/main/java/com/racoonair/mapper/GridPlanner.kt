@@ -230,6 +230,8 @@ class GridResult(
             w.add(tr("Revisa en la ortofoto que el pasillo de aproximación (cono azul) está libre de árboles, cables y casas."))
             return w
         }
+        if (params.camera.thermalWidthPx > 0 && (params.frontOverlap < 0.8 || params.sideOverlap < 0.75 || params.speed > 4.0))
+            w.add(tr("Mosaico térmico: la térmica es de 160×120 y cubre poco. Usa solape ≥ 80 % frontal y ≥ 75 % lateral y velocidad ≤ 4 m/s, o el mosaico térmico tendrá huecos."))
         if (params.altitude > 120) w.add(tr("Altura por encima de 120 m."))
         if (params.altitude < 20) w.add(tr("Altura muy baja (<20 m): obstáculos y muchas fotos."))
         if (concave) w.add(tr("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado. Revisa obstáculos o divide la zona."))
