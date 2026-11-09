@@ -79,7 +79,7 @@ class PlannerActivity : Activity(), MapView.Listener {
             frame.addView(right, LinearLayout.LayoutParams(0, mw, 1f))
         }
     }
-    private var result: GridResult? = null
+    private var result: PlanResult? = null
     private var blockersShown: List<String> = emptyList()
     private var settingHome = false
     private var phonePos: LatLon? = null
@@ -222,6 +222,12 @@ class PlannerActivity : Activity(), MapView.Listener {
         }
         panel.addView(TextView(this).apply { text = tr("Dron y cámara"); setTextColor(C_DIM); textSize = 11f })
         panel.addView(cameraSpinner)
+        // Misiones 3D (solo ANAFI: gimbal inclinable y apuntado a un punto).
+        missionBtn = button("", C_BLUE) { pickMissionType() }
+        spec3DBtn = button(tr("Ajustes 3D…"), C_GREY) { spec3DDialog() }
+        missionRow = row(missionBtn, spec3DBtn)
+        panel.addView(missionRow)
+        updateMissionUi()
         val (a, ea) = field(tr("Altura (m)"), fmt(p.altitude)); fAlt = ea
         val (b, eb) = field(tr("Solape frontal %"), fmt(p.frontOverlap * 100)); fFront = eb
         val (c, ec) = field(tr("Solape lateral %"), fmt(p.sideOverlap * 100)); fSide = ec
@@ -495,6 +501,80 @@ class PlannerActivity : Activity(), MapView.Listener {
         }.start()
     }
 
+    // ---------------------------------------------------------------- misiones 3D (ANAFI)
+
+    private lateinit var missionBtn: Button
+    private lateinit var spec3DBtn: Button
+    private lateinit var missionRow: View
+    /** Las misiones 3D necesitan gimbal inclinable: solo en la app de ANAFI. */
+    private val supports3D get() = Flavor.supports(Platform.ANAFI)
+
+    private fun updateMissionUi() {
+        missionRow.visibility = if (supports3D) View.VISIBLE else View.GONE
+        val t = Session.spec3D.type
+        missionBtn.text = "🎯 " + t.label
+        spec3DBtn.visibility = if (t.is3D) View.VISIBLE else View.GONE
+    }
+
+    private fun pickMissionType() {
+        val types = MissionType.values()
+        AlertDialog.Builder(this).setTitle(tr("Tipo de misión"))
+            .setSingleChoiceItems(types.map { it.label }.toTypedArray(), types.indexOf(Session.spec3D.type)) { d, i ->
+                d.dismiss()
+                val t = types[i]
+                if (t != Session.spec3D.type && zone.isNotEmpty())
+                    Toast.makeText(this, tr("Cada tipo usa la zona de forma distinta: revisa los puntos dibujados."), Toast.LENGTH_LONG).show()
+                Session.spec3D = Session.spec3D.copy(type = t)
+                if (t == MissionType.OBLIQUE && (num(fAlt) ?: 0.0) < Session.spec3D.objectHeight + 15) fAlt.setText(fmt(Session.spec3D.objectHeight + 25))
+                updateMissionUi(); recompute()
+                if (t.is3D) spec3DDialog()
+            }.setNegativeButton(tr("Cerrar"), null).show()
+    }
+
+    private fun spec3DDialog() {
+        val s = Session.spec3D
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
+        val (v1, eH) = field(tr("Altura del objeto (m)"), fmt(s.objectHeight))
+        val (v2, eD) = field(tr("Distancia al objeto (m)"), fmt(s.standoff))
+        val (v3, eR) = field(tr("Anillos (1–3)"), s.rings.toString())
+        val (v4, eT) = field(tr("Inclinación cámara (°)"), fmt(s.obliqueTilt), "-60")
+        val (v5, eM) = field(tr("Fila más baja (m)"), fmt(s.minAlt))
+        val (v6, eS) = field(tr("Velocidad de captura (m/s)"), fmt(s.speed))
+        val (v7, eE) = field(tr("Desnivel base del objeto − despegue (m)"), fmt(s.baseElev), "0")
+        // Inclinación y desnivel son negativos a menudo: teclado con signo.
+        for (e in listOf(eT, eE)) e.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+        box.addView(v1)
+        when (s.type) {
+            MissionType.ORBIT -> { box.addView(v2); box.addView(v3); box.addView(v5); box.addView(v6); box.addView(v7) }
+            MissionType.FACADE -> { box.addView(v2); box.addView(v5); box.addView(v6); box.addView(v7) }
+            MissionType.OBLIQUE -> { box.addView(v4); box.addView(v7) }
+            else -> {}
+        }
+        box.addView(TextView(this).apply {
+            setTextColor(C_DIM); textSize = 12f
+            text = when (s.type) {
+                MissionType.ORBIT -> tr("Anillos alrededor del objeto con la cámara apuntando a su centro. Más anillos = mejor modelo, más tiempo. Para estatuas, 2–3 anillos a 8–12 m.")
+                MissionType.FACADE -> tr("Filas horizontales de abajo arriba frente a la pared, cámara horizontal. Distancia típica 8–15 m.")
+                MissionType.OBLIQUE -> tr("Dos cuadrículas cruzadas con la cámara inclinada. −60° es un buen punto de partida; −45° ve más fachada, −75° más tejado. La altura de vuelo es la del campo «Altura».")
+                else -> ""
+            } + "\n\n" + tr("Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.")
+        })
+        AlertDialog.Builder(this).setTitle(Session.spec3D.type.label).setView(box)
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Aplicar")) { _, _ ->
+                val c = Session.spec3D
+                Session.spec3D = c.copy(
+                    objectHeight = (num(eH) ?: c.objectHeight).coerceIn(1.0, 100.0),
+                    standoff = (num(eD) ?: c.standoff).coerceIn(1.0, 100.0),
+                    rings = (num(eR)?.toInt() ?: c.rings).coerceIn(1, 3),
+                    obliqueTilt = (num(eT) ?: c.obliqueTilt).coerceIn(-85.0, -30.0),
+                    minAlt = (num(eM) ?: c.minAlt).coerceIn(1.0, 50.0),
+                    speed = (num(eS) ?: c.speed).coerceIn(0.5, 8.0),
+                    baseElev = (num(eE) ?: c.baseElev).coerceIn(-50.0, 50.0))
+                recompute()
+            }.show()
+    }
+
     // ---------------------------------------------------------------- Disco (ala fija)
 
     /** Viento previsto respecto a la final: aviso de viento cruzado o de cola. */
@@ -656,7 +736,7 @@ class PlannerActivity : Activity(), MapView.Listener {
         val ang = if (fAngle.text.isBlank()) null else (num(fAngle) ?: return null)
         if (listOf(alt, fr, sd, sp, ov).any { !it.isFinite() } || (ang != null && !ang.isFinite())) return null
         val cam = (cameraSpinner.selectedItem as? Camera) ?: Camera.SEQUOIA
-        val fw = if (isDisco) Session.fixedWing else null
+        val fw = if (isDisco && !Session.spec3D.type.is3D) Session.fixedWing else null
         return GridParams(alt, fr / 100.0, sd / 100.0, ang?.let { ((it % 360) + 360) % 360 }, sp.coerceIn(1.0, 12.0),
             ov.coerceIn(0.0, if (fw != null) 150.0 else 50.0), cam, fw)
     }
@@ -670,6 +750,14 @@ class PlannerActivity : Activity(), MapView.Listener {
         val p = readParams()
         if (p == null) { stats.text = tr("Revisa los parámetros (números)."); map.passes = emptyList(); return }
         Session.params = p
+        if (zone.size < 3 && Session.spec3D.type.is3D && supports3D) {
+            stats.text = when (Session.spec3D.type) {
+                MissionType.ORBIT -> tr("Órbita: toca alrededor del objeto (estatua, torre, edificio) para marcar su planta (mínimo 3 puntos).")
+                MissionType.FACADE -> tr("Fachada: toca un extremo de la pared, luego el otro, y por último un punto en el lado desde el que volará el dron.")
+                else -> tr("Doble cuadrícula: toca las esquinas de la zona o manzana (mínimo 3).")
+            }
+            map.passes = emptyList(); return
+        }
         if (zone.size < 3) {
             stats.text = tr("Toca el mapa para marcar las esquinas de la parcela (mínimo 3).\n") +
                 tr("Pulsación larga sobre un punto = borrarlo. Doble toque = acercar.\n\n") +
@@ -678,11 +766,12 @@ class PlannerActivity : Activity(), MapView.Listener {
         }
         if (home == null) { stats.text = if (isDisco) tr("Falta el punto de lanzamiento (botón «Lanzam.»).") else tr("Falta la casa (punto de despegue/aterrizaje)."); map.passes = emptyList(); return }
         try {
-            val r = GridPlanner.plan(zone, home, p)
+            val s3 = Session.spec3D
+            val r: PlanResult = if (s3.type.is3D && supports3D) Planner3D.plan(zone, home, p, s3) else GridPlanner.plan(zone, home, p)
             result = r
             map.passes = r.passes
             val w = ArrayList(r.warnings()); val bl = ArrayList(r.blockers())
-            r.fw?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { if (it.startsWith("⛔")) bl.add(0, it.removePrefix("⛔ ")) else w.add(0, it) } }
+            (r as? GridResult)?.fw?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { if (it.startsWith("⛔")) bl.add(0, it.removePrefix("⛔ ")) else w.add(0, it) } }
             blockersShown = bl
             stats.text = r.summary() + (if (bl.isEmpty()) "" else "\n⛔ " + bl.joinToString("\n⛔ ")) +
                 (if (w.isEmpty()) "" else "\n⚠ " + w.joinToString("\n⚠ "))
@@ -710,7 +799,7 @@ class PlannerActivity : Activity(), MapView.Listener {
                 try {
                     val txt = r.toMavlink()
                     val plan = FlightPlan.parse(txt) // validación con el mismo lector que el resto de la app
-                    val f = PlanStore.save(this, name, zone, r.params, Session.manualHome, txt)
+                    val f = PlanStore.save(this, name, zone, r.params, Session.manualHome, txt, if (supports3D) Session.spec3D else null)
                     Session.zoneName = name
                     Crumbs.write("planner: guardado ${f.name} (${plan.items.size} ítems)")
                     if (useAfter) {
@@ -734,7 +823,8 @@ class PlannerActivity : Activity(), MapView.Listener {
             val route = ArrayList<LatLon>(); route.add(r.home)
             r.passes.forEach { route.add(it.first); route.add(it.second) }
             route.add(r.home)
-            d.line(trf("Pasadas (%1\$s)", r.passes.size), route, "plan", r.params.altitude)
+            val kmlAlt = (r as? Plan3D)?.let { p3 -> p3.wps.map { it.alt }.average() } ?: r.params.altitude
+            d.line(trf("Pasadas (%1\$s)", r.passes.size), route, "plan", kmlAlt)
             d.point(tr("Casa"), r.home, "casa")
         }
         KmlExport.saveAndShare(this, name, d.build())
@@ -750,6 +840,7 @@ class PlannerActivity : Activity(), MapView.Listener {
                     zone.clear(); zone.addAll(z.zone); map.highlight = emptyList()
                     Session.fixedWing = z.fixedWing ?: FixedWing(droneCamera = Session.fixedWing.droneCamera)
                     Session.manualHome = z.home; Session.zoneName = z.name; Session.params = z.params
+                    if (supports3D) { Session.spec3D = z.spec3D; updateMissionUi() }
                     cameraSpinner.setSelection(cameras.indexOf(z.params.camera).coerceAtLeast(0))
                     fAlt.setText(fmt(z.params.altitude)); fFront.setText(fmt(z.params.frontOverlap * 100))
                     fSide.setText(fmt(z.params.sideOverlap * 100)); fSpeed.setText(fmt(z.params.speed))

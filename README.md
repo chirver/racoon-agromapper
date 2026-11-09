@@ -31,6 +31,7 @@
   - Alarms and pre-flight checklist.
   - A **weather and Kp traffic light** per aircraft (Open-Meteo + NOAA), with wind evaluated at flight altitude.
 - **Offline maps**: Spain's PNOA orthophoto (IGN, CC BY 4.0) can be downloaded for fields without coverage.
+- **ANAFI 3D photogrammetry** (ANAFI build): orbit around an object (statues, towers, buildings) with the camera aimed at its centre, oblique double grid for blocks and roofs, vertical façade grid, and the classic nadir grid.
 - Flight log (CSV), KML export and diagnostics.
 
 ### Supported hardware
@@ -38,7 +39,7 @@
 |---|---|---|
 | Parrot Bluegrass + Sequoia | SkyController 2 (USB) / WiFi | ✅ flown |
 | Parrot Disco FPV / Disco-Pro AG + Sequoia | SkyController 2 (USB) / WiFi | 🧪 ground-tested features; fixed-wing missions not flown yet |
-| Parrot ANAFI (Thermal / 4K / USA) | SkyController 3 | 🧪 separate build (`anafi` flavour), early stage |
+| Parrot ANAFI Thermal / ANAFI 4K | SkyController 3 | 🧪 separate APK with 3D missions, not flown yet |
 
 ### Android compatibility
 | | |
@@ -55,6 +56,7 @@ Android may warn that the app is "unrecognised" (Play Protect) because it is not
 
 ### Install
 **[⬇ Download RacoonAgroMapper-0.12.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.1.apk)**, open it on the phone and allow installing from unknown sources. Older and newer builds: [`dist/`](dist) and [Releases](../../releases).
+**ANAFI Thermal / 4K (3D missions, experimental):** [⬇ RacoonAgroMapper-ANAFI-0.13.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-ANAFI-0.13.apk). It installs alongside the Bluegrass/Disco app.
 
 ### Build
 No Android Studio or Gradle needed: `build-local/build_apk.sh` builds the APK with `aapt2`, `kotlinc` and `dx` (see the header of the script for the required paths). Flavours: `FLAVOR=parrot` (Bluegrass/Disco) and `FLAVOR=anafi`.
@@ -83,6 +85,7 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
   - Alarmas y lista de comprobación antes de volar.
   - **Semáforo de meteo y Kp** según el dron (Open-Meteo + NOAA), con el viento a la altura de vuelo.
 - **Mapas sin conexión**: ortofoto PNOA del IGN (CC BY 4.0), descargable para el campo sin cobertura.
+- **Fotogrametría 3D con ANAFI** (APK de ANAFI): órbita alrededor de un objeto (estatuas, torres, edificios) con la cámara apuntando a su centro, doble cuadrícula oblicua para manzanas y tejados, rejilla vertical de fachada y la cuadrícula cenital de siempre.
 - Registro de vuelo (CSV), exportación KML y diagnóstico.
 
 ### Compatibilidad con Android
@@ -95,6 +98,7 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
 
 ### Instalar
 **[⬇ Descargar RacoonAgroMapper-0.12.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.12.1.apk)**, ábrelo en el móvil y permite instalar apps de origen desconocido.
+**ANAFI Thermal / 4K (misiones 3D, experimental):** [⬇ RacoonAgroMapper-ANAFI-0.13.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-ANAFI-0.13.apk). Se instala junto a la app de Bluegrass/Disco.
 
 ### Licencia
 Software libre bajo **GNU GPL v3.0** ([LICENSE](LICENSE)). Los componentes de terceros y sus licencias están en [NOTICE.md](NOTICE.md).

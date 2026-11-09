@@ -45,6 +45,8 @@ object Session {
     var manualHome: LatLon? = null
     /** Aterrizaje de la Disco en el planificador (punto, rumbo de la final, aproximación). */
     var fixedWing = FixedWing()
+    /** Tipo de misión y parámetros 3D (ANAFI). */
+    var spec3D = Spec3D()
     var zoneName = ""
 
     fun setPlan(p: FlightPlan, name: String) {

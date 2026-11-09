@@ -112,22 +112,22 @@ data class GridParams(
 )
 
 class GridResult(
-    val passes: List<Pair<LatLon, LatLon>>,
-    val home: LatLon,
-    val params: GridParams,
+    override val passes: List<Pair<LatLon, LatLon>>,
+    override val home: LatLon,
+    override val params: GridParams,
     val angleDeg: Double,
     val lineSpacing: Double,
-    val triggerDistance: Double,
+    override val triggerDistance: Double,
     val effectiveSpeed: Double,
     val speedLimited: Boolean,
     val surveyLength: Double,
     val transitLength: Double,
-    val photos: Int,
+    override val photos: Int,
     val areaM2: Double,
     val concave: Boolean,
     /** Ala fija: pasadas voladas de forma alterna (cada [skip]) porque están más juntas que el giro. */
     val skip: Int = 1
-) {
+) : PlanResult {
     val fw get() = params.fixedWing
     /** Longitud del tramo final: última pasada → alineación → aproximación → toma. */
     val landingLength: Double get() {
@@ -142,7 +142,7 @@ class GridResult(
     val itemCount get() = 9 + passes.size * 6 + 1
 
     /** Motivos que IMPIDEN usar el plan (no solo avisos). */
-    fun blockers(): List<String> {
+    override fun blockers(): List<String> {
         val b = ArrayList<String>()
         fw?.let { f ->
             if (f.landing == null) b.add(tr("Falta el aterrizaje: pulsa «🛬 Aterrizaje», toca el punto de toma y luego de dónde llega el avión."))
@@ -176,7 +176,7 @@ class GridResult(
         return b
     }
     /** Tiempo estimado en segundos: subida, tránsitos a 10 m/s, pasadas, giros y aterrizaje. */
-    val estimatedSeconds: Double
+    override val estimatedSeconds: Double
         get() = if (fw != null)
             // Ala fija: todo a crucero; cada giro ≈ media vuelta de radio 40 m; final y toma ≈ 60 s.
             (transitLength + surveyLength + landingLength) / FixedWing.CRUISE +
@@ -186,7 +186,7 @@ class GridResult(
 
     val gsdCm get() = params.camera.gsdCm(params.altitude)
 
-    fun summary(): String {
+    override fun summary(): String {
         val min = estimatedSeconds / 60.0
         fw?.let { f ->
             return String.format(Locale.ROOT,
@@ -217,7 +217,7 @@ class GridResult(
             effectiveSpeed, limit, areaM2 / 10000.0, surveyLength + transitLength, min)
     }
 
-    fun warnings(): List<String> {
+    override fun warnings(): List<String> {
         val w = ArrayList<String>()
         fw?.let { f ->
             if (concave) w.add(tr("Zona cóncava: algunas pasadas cruzan por FUERA del contorno dibujado."))
@@ -242,7 +242,7 @@ class GridResult(
     /** Intervalo de disparo en segundos (ANAFI dispara por tiempo). */
     val intervalS get() = triggerDistance / effectiveSpeed
 
-    fun toMavlink(): String = when {
+    override fun toMavlink(): String = when {
         fw != null -> toMavlinkDisco()
         params.camera.platform == Platform.ANAFI -> toMavlinkAnafi()
         else -> toMavlinkSequoia()

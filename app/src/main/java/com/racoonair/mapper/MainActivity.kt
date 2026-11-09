@@ -1253,6 +1253,8 @@ class MainActivity : Activity(), DroneLink.Listener {
         if (a.last < 0) return null
         val p = a.plan
         if (p.isFixedWing) return null // Disco: reanudar aún no está preparado para ala fija
+        // Misiones 3D (órbita, fachada, oblicua): reanudar a media altura podría cruzar el objeto.
+        if (p.items.any { it.command == FlightPlan.CMD_SET_ROI || (it.command == FlightPlan.CMD_MOUNT_CONTROL && it.p1 > -89.0) }) return null
         val k = p.resumePass(a.last) ?: return null
         val firstCapture = p.items[p.passStarts.first()].index
         if (k == 0 && a.last < firstCapture) return null // no llegó a empezar a capturar

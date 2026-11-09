@@ -82,10 +82,14 @@ class FlightPlan private constructor(val text: String, val items: List<Item>) {
         val landIdx = items.indexOfLast { it.command == CMD_LAND }
         val returnIdx = if (landIdx > 0) (landIdx - 1 downTo 0).firstOrNull { items[it].command == CMD_WAYPOINT } ?: -1 else -1
         val oldLand = landPoint
+        // Misiones 3D: el primer waypoint tras el despegue es la subida vertical sobre la casa; se mueve con ella.
+        val toIdx = items.indexOfFirst { it.command == CMD_TAKEOFF }
+        val climbIdx = if (toIdx >= 0) (toIdx + 1 until items.size).firstOrNull { items[it].command == CMD_WAYPOINT } ?: -1 else -1
         val moved = items.mapIndexed { i, it ->
             val isReturnWp = i == returnIdx && oldLand != null &&
                 haversine(it.lat, it.lon, oldLand.lat, oldLand.lon) < 3.0
-            if (it.command == CMD_TAKEOFF || it.command == CMD_LAND || isReturnWp) it.copy(lat = lat, lon = lon) else it
+            val isClimbWp = i == climbIdx && haversine(it.lat, it.lon, items[toIdx].lat, items[toIdx].lon) < 3.0
+            if (it.command == CMD_TAKEOFF || it.command == CMD_LAND || isReturnWp || isClimbWp) it.copy(lat = lat, lon = lon) else it
         }
         val sb = StringBuilder("QGC WPL 120\n")
         for ((i, it) in moved.withIndex()) {
@@ -198,6 +202,7 @@ class FlightPlan private constructor(val text: String, val items: List<Item>) {
         const val CMD_IMAGE_START = 2000
         const val CMD_IMAGE_STOP = 2001
         const val CMD_MOUNT_CONTROL = 205
+        const val CMD_SET_ROI = 201
         const val CMD_PARROT_VIEW_MODE = 50000
         const val CMD_PARROT_PICTURE_MODE = 50001
         const val CMD_PARROT_PHOTO_SENSORS = 50002
