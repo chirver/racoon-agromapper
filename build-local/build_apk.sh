@@ -22,7 +22,7 @@ rm -rf "$OUT" && mkdir -p "$OUT/classes" "$OUT/dex" "$OUT/apk/lib" "$OUT/gen"
 case "$FLAVOR" in
   parrot) PKG=com.racoonair.mapper; MANIFEST="$SRC/main/AndroidManifest.xml"; EXTRA_CP=""; EXTRA_PKGS="" ;;
   anafi)  PKG=com.racoonair.mapper.anafi; MANIFEST="$SRC/anafi/AndroidManifest.xml"; EXTRA_CP=":$HERE/groundsdk-1.8-api.jar"
-          EXTRA_PKGS="--extra-packages com.parrot.drone.groundsdk:com.parrot.drone.groundsdk.arsdkengine:com.parrot.drone.groundsdk.sdkcore" ;;
+          EXTRA_PKGS="--extra-packages com.parrot.drone.groundsdk:com.parrot.drone.groundsdk.arsdkengine:com.parrot.drone.groundsdk.sdkcore:com.google.android.gms.common:com.google.android.gms.base" ;;
   *) echo "FLAVOR desconocido: $FLAVOR"; exit 1 ;;
 esac
 echo "== Sabor: $FLAVOR ($PKG) =="

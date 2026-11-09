@@ -21,3 +21,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ## 0.13.2
 - Fix: `NoClassDefFoundError` al conectar. Faltaban clases auxiliares de las que depende GroundSDK (lambdas, protobuf, red…); van ahora en un tercer dex.
+
+## 0.13.3
+- Fix: GroundSDK pedía la declaración de Google Play services en el manifiesto. Se pide el permiso de ubicación al conectar.

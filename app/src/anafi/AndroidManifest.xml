@@ -35,6 +35,10 @@
             android:screenOrientation="fullUser"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
 
+        <!-- Google Play services: GroundSDK lo pide para la ubicación del móvil -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <!-- GroundSDK 1.8 (ANAFI): motor ARSDK y arranque por USB del SkyController 3 -->
         <meta-data
             android:name="com.parrot.drone.groundsdk.engine.arsdkengine"

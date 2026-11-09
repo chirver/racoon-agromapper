@@ -757,6 +757,9 @@ class MainActivity : Activity(), DroneLink.Listener {
                 setViewMode(Session.showVideo && link.supportsVideo)
             }
             if (choice.platform == Platform.BLUEGRASS_SEQUOIA && !DroneLink.loadLibs()) { onLog(tr("ERROR: no se pudieron cargar las librerías ARSDK.")); return }
+            // GroundSDK usa la ubicación del móvil (casa, efemérides): pedir el permiso si falta.
+            if (choice.platform == Platform.ANAFI && checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION), 77)
             onLog(trf("Conectando: %1\$s", choice.label))
             try { link.connect(choice) } catch (t: Throwable) {
                 Crumbs.write("connect EXC ${t.javaClass.name}: ${t.message}")
