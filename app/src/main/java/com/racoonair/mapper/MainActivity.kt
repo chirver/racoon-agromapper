@@ -246,6 +246,8 @@ class MainActivity : Activity(), DroneLink.Listener {
     private lateinit var mapTab: Button
     private lateinit var videoTab: Button
     private lateinit var tabsRow: View
+    private lateinit var thermalTab: Button
+    private var streamView: View? = null
 
     private fun setViewMode(video: Boolean) {
         Session.showVideo = video
@@ -255,6 +257,14 @@ class MainActivity : Activity(), DroneLink.Listener {
         flightMap.visibility = if (video) View.GONE else View.VISIBLE
         videoBox.visibility = if (video) View.VISIBLE else View.GONE
         followBtn.isEnabled = !video
+        thermalTab.visibility = if (link.hasThermal) View.VISIBLE else View.GONE
+        thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB")
+        // Enlaces con visor propio (GroundSDK): se pone en lugar del VideoView.
+        if (video && streamView == null) link.createStreamView(this)?.let { v ->
+            streamView = v
+            videoBox.addView(v, 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            videoView.visibility = View.GONE
+        }
         if (video) { link.videoSink = videoView; link.setVideoEnabled(true) }
         else { link.setVideoEnabled(false); if (link.videoSink === videoView) link.videoSink = null }
         updateOsd(link.telemetry)
@@ -270,7 +280,11 @@ class MainActivity : Activity(), DroneLink.Listener {
             append(trf("ALT %1\$s  VEL %2\$s  BAT %3\$s", fmt(t.altitude, 0, "m"), fmt(t.speed, 1, "m/s"), if (t.battery < 0) "—" else "${t.battery}%"))
             append(trf("\nCASA %1\$s  ·  GPS %2\$s  ·  %3\$s", dist, if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX", t.flyingState))
         }
-        val fresh = System.currentTimeMillis() - videoView.lastFrameAt < 2000
+        val fresh = link.streamAlive() ?: (System.currentTimeMillis() - videoView.lastFrameAt < 2000)
+        if (::thermalTab.isInitialized) {
+            val vis = if (link.hasThermal) View.VISIBLE else View.GONE
+            if (thermalTab.visibility != vis) thermalTab.visibility = vis
+        }
         videoWait.visibility = if (fresh) View.GONE else View.VISIBLE
         videoWait.text = if (!link.isConnected) tr("Conecta el dron para ver el vídeo") else tr("Esperando vídeo…")
     }
@@ -474,6 +488,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             override fun onLog(msg: String) { Session.logLines.addFirst(msg) }
         }
         if (link.videoSink === videoView) link.videoSink = null
+        if (streamView != null) { link.releaseStreamView(); streamView = null }
         if (isFinishing) link.setVideoEnabled(false)
         // Solo al salir de verdad (atrás); un cambio de configuración no debe cortar el enlace en vuelo.
         if (isFinishing) {
@@ -618,7 +633,11 @@ class MainActivity : Activity(), DroneLink.Listener {
         // Selector Mapa | Vídeo: comparten el mismo hueco para no saturar la pantalla.
         mapTab = button(tr("🗺 Mapa"), C_BLUE) { setViewMode(video = false) }
         videoTab = button(tr("🎥 Vídeo"), C_GREY) { setViewMode(video = true) }
-        tabsRow = row(mapTab, videoTab)
+        thermalTab = button(tr("🌡 Térmica"), C_GREY) {
+            link.setThermalView(!link.thermalView)
+            thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB")
+        }.apply { visibility = View.GONE }
+        tabsRow = row(mapTab, videoTab, thermalTab)
         mc.addView(tabsRow)
         viewHolder = FrameLayout(this)
         flightMap = MapView(this)

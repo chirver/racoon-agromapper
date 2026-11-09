@@ -38,6 +38,16 @@ interface Link {
     val supportsVideo: Boolean
     var videoSink: VideoSink?
     fun setVideoEnabled(on: Boolean)
+    /** Visor propio del SDK (GroundSDK lo decodifica y pinta él). null = usar VideoView con [videoSink]. */
+    fun createStreamView(ctx: android.content.Context): android.view.View? = null
+    /** La pantalla que tenía el visor se cierra. */
+    fun releaseStreamView() {}
+    /** ¿Está llegando vídeo al visor propio? null si el enlace no tiene visor propio. */
+    fun streamAlive(): Boolean? = null
+    /** ANAFI Thermal: ver la cámara térmica (true) o la RGB (false) en el vídeo. */
+    val hasThermal: Boolean get() = false
+    val thermalView: Boolean get() = false
+    fun setThermalView(on: Boolean) {}
 }
 
 /** Opciones del desplegable de conexión. */

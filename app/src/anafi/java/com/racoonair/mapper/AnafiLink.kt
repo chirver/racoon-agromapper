@@ -26,6 +26,9 @@ import com.parrot.drone.groundsdk.device.pilotingitf.FlightPlanPilotingItf
 import com.parrot.drone.groundsdk.device.pilotingitf.ManualCopterPilotingItf
 import com.parrot.drone.groundsdk.device.pilotingitf.ReturnHomePilotingItf
 import com.parrot.drone.groundsdk.facility.AutoConnection
+import com.parrot.drone.groundsdk.device.peripheral.StreamServer
+import com.parrot.drone.groundsdk.device.peripheral.stream.CameraLive
+import com.parrot.drone.groundsdk.stream.GsdkStreamView
 import java.io.File
 
 /**
@@ -112,6 +115,8 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun closeDrone() {
         droneRefs.forEach { try { it.close() } catch (_: Throwable) {} }
         droneRefs.clear(); drone = null; fp = null; rth = null; manual = null; thermal = null; model = null
+        try { liveRef?.close() } catch (_: Throwable) {}
+        liveRef = null; live = null; try { streamView?.setStream(null) } catch (_: Throwable) {}
         mainCam = null; thermalCam = null
     }
 
@@ -156,7 +161,17 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         droneRefs += d.getPilotingItf(FlightPlanPilotingItf::class.java) { p -> fp = p; onFlightPlan(p) }
         droneRefs += d.getPilotingItf(ReturnHomePilotingItf::class.java) { r -> rth = r; onRth(r) }
         droneRefs += d.getPilotingItf(ManualCopterPilotingItf::class.java) { m -> manual = m }
-        droneRefs += d.getPeripheral(ThermalControl::class.java) { t -> thermal = t }
+        droneRefs += d.getPeripheral(ThermalControl::class.java) { t ->
+            val first = thermal == null && t != null
+            thermal = t
+            if (first) applyThermalView()
+            changed()
+        }
+        droneRefs += d.getPeripheral(StreamServer::class.java) { s ->
+            if (s == null) return@getPeripheral
+            if (!s.streamingEnabled()) s.enableStreaming(true)
+            if (liveRef == null) liveRef = s.live { cl -> live = cl; bindStream() }
+        }
         droneRefs += d.getPeripheral(MainCamera::class.java) { c -> mainCam = c }
         droneRefs += d.getPeripheral(ThermalCamera::class.java) { c -> thermalCam = c }
     }
@@ -355,10 +370,72 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     }
     override fun cancelReturnHome() { val ok = rth?.deactivate(); log(if (ok == true) "Vuelta a casa cancelada ✓" else "No se pudo cancelar la vuelta a casa") }
 
-    // Vídeo en directo de ANAFI: pendiente (GroundSDK lo trae, se activará en la app ANAFI cuando toque).
-    override val supportsVideo = false
+    // ---------------------------------------------------------------- vídeo (GroundSDK decodifica y pinta)
+
+    override val supportsVideo = true
     override var videoSink: VideoSink? = null
-    override fun setVideoEnabled(on: Boolean) {}
+    private var streamView: GsdkStreamView? = null
+    private var liveRef: Ref<CameraLive>? = null
+    private var live: CameraLive? = null
+    private var videoOn = false
+    private var thermalOn = true
+
+    override fun createStreamView(ctx: Context): android.view.View {
+        releaseStreamView()
+        val v = GsdkStreamView(ctx)
+        try { v.setScaleType(GsdkStreamView.SCALE_TYPE_FIT); v.setPaddingFill(GsdkStreamView.PADDING_FILL_NONE) } catch (_: Throwable) {}
+        streamView = v
+        bindStream()
+        return v
+    }
+    override fun releaseStreamView() {
+        try { streamView?.setStream(null) } catch (_: Throwable) {}
+        streamView = null
+    }
+    override fun setVideoEnabled(on: Boolean) { videoOn = on; bindStream() }
+    override fun streamAlive(): Boolean = live?.playState() == CameraLive.PlayState.PLAYING && videoOn
+
+    private fun bindStream() {
+        val v = streamView ?: return
+        val l = live
+        try {
+            if (videoOn && l != null) {
+                v.setStream(l)
+                if (l.playState() != CameraLive.PlayState.PLAYING) l.play()
+            } else v.setStream(null)
+        } catch (t: Throwable) { log("Vídeo: ${t.javaClass.simpleName}: ${t.message}") }
+    }
+
+    // ANAFI Thermal: el dron mezcla las dos cámaras; elegimos qué se ve sin tocar la captura de fotos.
+    override val hasThermal get() = thermal != null
+    override val thermalView get() = thermalOn
+    override fun setThermalView(on: Boolean) { thermalOn = on; applyThermalView() }
+
+    private fun applyThermalView() {
+        val th = thermal ?: return
+        try {
+            if (th.mode().value != ThermalControl.Mode.STANDARD) th.mode().value = ThermalControl.Mode.STANDARD
+            th.sendPalette(IronPalette)
+            th.sendRendering(object : ThermalControl.Rendering {
+                override fun getMode() = if (thermalOn) ThermalControl.Rendering.Mode.THERMAL else ThermalControl.Rendering.Mode.VISIBLE
+                override fun getBlendingRate() = 0.0
+            })
+            log(if (thermalOn) "Vídeo: cámara térmica" else "Vídeo: cámara RGB")
+        } catch (t: Throwable) { log("Térmica: ${t.javaClass.simpleName}: ${t.message}") }
+    }
+
+    /** Paleta «hierro» relativa: frío negro/azul → caliente amarillo/blanco, escala automática. */
+    private object IronPalette : ThermalControl.RelativePalette {
+        private class C(val p: Double, val r: Double, val g: Double, val b: Double) : ThermalControl.Palette.Color {
+            override fun getPosition() = p; override fun getRed() = r; override fun getGreen() = g; override fun getBlue() = b
+        }
+        private val colors = listOf(C(0.0, 0.0, 0.0, 0.0), C(0.2, 0.2, 0.0, 0.55), C(0.45, 0.7, 0.0, 0.5),
+            C(0.7, 1.0, 0.45, 0.0), C(0.9, 1.0, 0.85, 0.1), C(1.0, 1.0, 1.0, 1.0))
+        override fun getColors(): Collection<ThermalControl.Palette.Color> = colors
+        override fun getLowestTemperature() = 0.0
+        override fun getHighestTemperature() = 1.0
+        override fun isLocked() = false
+    }
 
     override fun returnHome() { val ok = rth?.activate(); log(if (ok == true) "Volver a casa ✓" else "Volver a casa rechazado") }
     override fun land() {

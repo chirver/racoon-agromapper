@@ -15,7 +15,7 @@
     <bool name="gsdk_rc_accessory_bootstrap_activity_enabled">true</bool>
     <bool name="gsdk_usb_debug_enabled">false</bool>
     <bool name="gsdk_usb_enabled">true</bool>
-    <bool name="gsdk_video_decoding_enabled">false</bool>
+    <bool name="gsdk_video_decoding_enabled">true</bool>
     <bool name="gsdk_wifi_enabled">true</bool>
     <integer name="arsdk_debug_usb_bridge_port">13579</integer>
     <integer name="gsdk_blackbox_quota">0</integer>

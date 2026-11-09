@@ -24,3 +24,7 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ## 0.13.3
 - Fix: GroundSDK pedía la declaración de Google Play services en el manifiesto. Se pide el permiso de ubicación al conectar.
+
+## 0.13.4
+- Primer arranque con conexión real (SkyController 3).
+- Vídeo en directo con el visor de GroundSDK y botón RGB / térmica (ANAFI Thermal, paleta hierro).

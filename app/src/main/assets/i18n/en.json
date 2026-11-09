@@ -818,5 +818,7 @@
  "Desnivel base del objeto − despegue (m)": "Height difference: object base − take-off (m)",
  "Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.": "Height difference: if you take off lower or higher than the object's base, enter the difference (positive = the object is higher). Altitudes are counted from take-off.",
  "Conectando: %1$s": "Connecting: %1$s",
- "Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar.": "Switch on the SkyController 3 and the ANAFI, plug the controller in by USB and press Connect."
+ "Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar.": "Switch on the SkyController 3 and the ANAFI, plug the controller in by USB and press Connect.",
+ "🌡 Térmica": "🌡 Thermal",
+ "📷 RGB": "📷 RGB"
 }
