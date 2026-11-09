@@ -80,7 +80,9 @@ class MainActivity : Activity(), DroneLink.Listener {
         link = existing ?: Flavor.newLink(Flavor.platforms.first(), applicationContext, this).also { Session.link = it }
         link.listener = this
         setContentView(buildUi())
-        if (existing == null) {
+        if (existing == null && !Flavor.supports(Platform.BLUEGRASS_SEQUOIA)) {
+            onLog(tr("Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar."))
+        } else if (existing == null) {
             if (!DroneLink.loadLibs()) onLog(tr("ERROR: no se pudieron cargar las librerías ARSDK."))
             else onLog(tr("ARSDK 3.14 cargado. Conecta el móvil a la WiFi del dron y pulsa Conectar."))
         } else onLog(tr("Pantalla recreada; el enlace sigue activo."))
@@ -755,7 +757,12 @@ class MainActivity : Activity(), DroneLink.Listener {
                 setViewMode(Session.showVideo && link.supportsVideo)
             }
             if (choice.platform == Platform.BLUEGRASS_SEQUOIA && !DroneLink.loadLibs()) { onLog(tr("ERROR: no se pudieron cargar las librerías ARSDK.")); return }
-            link.connect(choice)
+            onLog(trf("Conectando: %1\$s", choice.label))
+            try { link.connect(choice) } catch (t: Throwable) {
+                Crumbs.write("connect EXC ${t.javaClass.name}: ${t.message}")
+                onLog(trf("ERROR conectando: %1\$s: %2\$s", t.javaClass.simpleName, t.message))
+                Toast.makeText(this, trf("ERROR conectando: %1\$s: %2\$s", t.javaClass.simpleName, t.message), Toast.LENGTH_LONG).show()
+            }
         }
         refreshButtons()
     }

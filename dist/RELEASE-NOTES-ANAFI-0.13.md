@@ -15,3 +15,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ---
 *App aparte para ANAFI Thermal / 4K con misiones 3D (órbita, doble cuadrícula oblicua, fachada y cuadrícula cenital). Experimental, aún sin volar.*
+
+## 0.13.1
+- Fix: «Conectar» no hacía nada. GroundSDK no arrancaba porque faltaban recursos del motor ARSDK (efemérides GPS). Los errores de conexión ahora se muestran en pantalla.

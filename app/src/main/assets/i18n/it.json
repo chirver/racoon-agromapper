@@ -816,5 +816,7 @@
  "El despegue queda dentro de la órbita: el dron subirá en vertical a la altura segura antes de moverse.": "Il decollo è dentro l'orbita: il drone salirà in verticale alla quota sicura prima di muoversi.",
  "Parte de la misión queda por debajo del punto de despegue: despega a la altura de la base del objeto o más abajo.": "Parte della missione è sotto il punto di decollo: decolla alla quota della base dell'oggetto o più in basso.",
  "Desnivel base del objeto − despegue (m)": "Dislivello base dell'oggetto − decollo (m)",
- "Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.": "Dislivello: se decolli più in basso o più in alto della base dell'oggetto, indica la differenza (positivo = l'oggetto è più in alto). Le quote si contano dal decollo."
+ "Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.": "Dislivello: se decolli più in basso o più in alto della base dell'oggetto, indica la differenza (positivo = l'oggetto è più in alto). Le quote si contano dal decollo.",
+ "Conectando: %1$s": "Connessione: %1$s",
+ "Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar.": "Accendi lo SkyController 3 e l'ANAFI, collega il radiocomando via USB e premi Connetti."
 }

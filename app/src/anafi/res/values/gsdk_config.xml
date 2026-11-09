@@ -7,7 +7,7 @@
     <bool name="gsdk_ble_enabled">false</bool>
     <bool name="gsdk_crash_report_enabled">false</bool>
     <bool name="gsdk_dev_toolbox_enabled">false</bool>
-    <bool name="gsdk_ephemeris_sync_enabled">true</bool>
+    <bool name="gsdk_ephemeris_sync_enabled">false</bool>
     <bool name="gsdk_firmware_enabled">false</bool>
     <bool name="gsdk_flight_data_enabled">false</bool>
     <bool name="gsdk_flight_log_enabled">false</bool>
@@ -38,4 +38,11 @@
     <string name="gsdk_blackbox_public_folder"></string>
     <string name="gsdk_firmware_server"></string>
     <string name="gsdk_reverse_geocoder_default_country_code"></string>
+    <!-- Recursos del motor arsdkengine (los lee aunque la función esté apagada; sin ellos GroundSDK no arranca) -->
+    <integer name="blackbox_buffer_capacity">25</integer>
+    <integer name="ephemeris_download_interval">48</integer>
+    <integer name="ephemeris_validity_period">72</integer>
+    <string name="ublox_api_token"></string>
+    <string name="ublox_ephemeris_main_server"></string>
+    <string name="ublox_ephemeris_backup_server"></string>
 </resources>

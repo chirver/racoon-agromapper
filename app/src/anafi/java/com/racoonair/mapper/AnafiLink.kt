@@ -88,6 +88,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         } catch (t: Throwable) {
             Crumbs.write("anafi EXC ${t.javaClass.name}: ${t.message}")
             log("ERROR iniciando GroundSDK: ${t.javaClass.simpleName}: ${t.message}")
+            main.post { try { android.widget.Toast.makeText(ctx, "GroundSDK: ${t.javaClass.simpleName}: ${t.message}", android.widget.Toast.LENGTH_LONG).show() } catch (_: Throwable) {} }
             try { gsdk?.close() } catch (_: Throwable) {}
             gsdk = null
             telemetry.connection = "desconectado"

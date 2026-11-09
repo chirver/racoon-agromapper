@@ -816,5 +816,7 @@
  "El despegue queda dentro de la órbita: el dron subirá en vertical a la altura segura antes de moverse.": "Der Start liegt innerhalb der Umkreisung: Die Drohne steigt senkrecht auf die sichere Höhe, bevor sie sich bewegt.",
  "Parte de la misión queda por debajo del punto de despegue: despega a la altura de la base del objeto o más abajo.": "Ein Teil der Mission liegt unter dem Startpunkt: Starte auf Höhe der Objektbasis oder tiefer.",
  "Desnivel base del objeto − despegue (m)": "Höhenunterschied Objektbasis − Start (m)",
- "Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.": "Höhenunterschied: Startest du tiefer oder höher als die Objektbasis, gib die Differenz ein (positiv = Objekt liegt höher). Die Höhen werden ab dem Start gerechnet."
+ "Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.": "Höhenunterschied: Startest du tiefer oder höher als die Objektbasis, gib die Differenz ein (positiv = Objekt liegt höher). Die Höhen werden ab dem Start gerechnet.",
+ "Conectando: %1$s": "Verbinde: %1$s",
+ "Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar.": "Schalte SkyController 3 und ANAFI ein, verbinde die Fernsteuerung per USB und tippe auf Verbinden."
 }
