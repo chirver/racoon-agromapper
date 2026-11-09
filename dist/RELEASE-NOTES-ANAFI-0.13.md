@@ -18,3 +18,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 
 ## 0.13.1
 - Fix: «Conectar» no hacía nada. GroundSDK no arrancaba porque faltaban recursos del motor ARSDK (efemérides GPS). Los errores de conexión ahora se muestran en pantalla.
+
+## 0.13.2
+- Fix: `NoClassDefFoundError` al conectar. Faltaban clases auxiliares de las que depende GroundSDK (lambdas, protobuf, red…); van ahora en un tercer dex.

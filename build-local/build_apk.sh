@@ -8,7 +8,7 @@
 #   DX_JAR      -> dx-30.x.jar (viene dentro de dex2jar/dex-tools)
 #   STDLIB_JAR  -> kotlin-stdlib.jar
 #   AAPT2       -> aapt2 (p. ej. el que trae apktool en prebuilt/linux/aapt2_64)
-# Usa build-local/arsdk-3.14.dex (ARSDK3) y, en anafi, groundsdk-1.8-{a,b}.dex.
+# Usa build-local/arsdk-3.14.dex (ARSDK3) y, en anafi, groundsdk-1.8-{a,b,c}.dex.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$HERE")"
@@ -61,7 +61,9 @@ cp "$HERE/arsdk-3.14.dex" "$OUT/apk/classes2.dex"
 if [ "$FLAVOR" = anafi ]; then
   cp "$HERE/groundsdk-1.8-a.dex" "$OUT/apk/classes3.dex"
   cp "$HERE/groundsdk-1.8-b.dex" "$OUT/apk/classes4.dex"
-  DEXES+=(classes3.dex classes4.dex)
+  # Clases auxiliares (ofuscadas) de las que depende GroundSDK: lambdas, protobuf, okhttp, androidx…
+  cp "$HERE/groundsdk-1.8-c.dex" "$OUT/apk/classes5.dex"
+  DEXES+=(classes3.dex classes4.dex classes5.dex)
 fi
 
 echo "[5/6] dex + librerías nativas"
