@@ -14,6 +14,8 @@ Changes made for Racoon AgroMapper (built without Gradle, Maven or Google Play S
    `loggingInterceptor.level(...)` → `setLevel(...)`: same calls in the okhttp 3.12 API (Java) instead of 4.x (Kotlin).
 3. Added `com/parrot/drone/groundsdk/BuildConfig.java` and `com/parrot/drone/groundsdk/sdkcore/BuildConfig.java`,
    which Gradle would normally generate (`DEBUG = false`).
+4. `hmd/Renderer.java` and `hmd/GsdkHmdView.java`: exceptions on the HMD GL thread (and while drawing the overlay)
+   are caught and handed to a public static `GsdkHmdView.sErrorListener` instead of terminating the app.
 
 App-level configuration overrides (no data sent to any server, no crash reports, no flight logs, no firmware or
 ephemeris downloads) live in `app/src/anafi/res/values/gsdk_config.xml`.

@@ -904,5 +904,12 @@
  "\nRUMBO %1$s": "\nHDG %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  LANDING %1$s m at %2$s°",
  "· La Sequoia aún no cambia de modo: reintentando…": "· The Sequoia has not changed mode yet: retrying…",
- "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Goggles mode: put the phone in the goggles. To exit, take it out and tap the screen."
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Goggles mode: put the phone in the goggles. To exit, take it out and tap the screen.",
+ "ENLACE %1$s": "LINK %1$s",
+ "SIN GPS": "NO GPS",
+ "CASA —": "HOME —",
+ "CASA %1$s": "HOME %1$s",
+ "Las gafas han fallado": "The goggles view failed",
+ "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "The ANAFI goggles view hit an error and was closed. Send the Diagnostics so it can be fixed.\n\n%1$s",
+ "RUMBO %1$s": "HDG %1$s"
 }

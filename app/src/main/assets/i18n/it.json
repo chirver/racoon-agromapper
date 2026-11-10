@@ -904,5 +904,12 @@
  "\nRUMBO %1$s": "\nPRUA %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  ATTERRAGGIO %1$s m a %2$s°",
  "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia non ha ancora cambiato modalità: nuovo tentativo…",
- "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Modalità occhiali: inserisci il telefono negli occhiali. Per uscire, estrailo e tocca lo schermo."
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Modalità occhiali: inserisci il telefono negli occhiali. Per uscire, estrailo e tocca lo schermo.",
+ "ENLACE %1$s": "LINK %1$s",
+ "SIN GPS": "NO GPS",
+ "CASA —": "CASA —",
+ "CASA %1$s": "CASA %1$s",
+ "Las gafas han fallado": "La vista occhiali non ha funzionato",
+ "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "La vista occhiali dell'ANAFI ha dato un errore ed è stata chiusa. Invia la Diagnostica per correggerlo.\n\n%1$s",
+ "RUMBO %1$s": "ROTTA %1$s"
 }

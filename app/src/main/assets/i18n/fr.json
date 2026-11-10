@@ -904,5 +904,12 @@
  "\nRUMBO %1$s": "\nCAP %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  POSÉ %1$s m au %2$s°",
  "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia n'a pas encore changé de mode : nouvel essai…",
- "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Mode lunettes : placez le téléphone dans les lunettes. Pour quitter, retirez-le et touchez l'écran."
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Mode lunettes : placez le téléphone dans les lunettes. Pour quitter, retirez-le et touchez l'écran.",
+ "ENLACE %1$s": "LIAISON %1$s",
+ "SIN GPS": "PAS DE GPS",
+ "CASA —": "MAISON —",
+ "CASA %1$s": "MAISON %1$s",
+ "Las gafas han fallado": "Le mode lunettes a échoué",
+ "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "Le mode lunettes de l'ANAFI a rencontré une erreur et a été fermé. Envoyez le Diagnostic pour le corriger.\n\n%1$s",
+ "RUMBO %1$s": "CAP %1$s"
 }

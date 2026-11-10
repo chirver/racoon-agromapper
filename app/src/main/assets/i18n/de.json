@@ -904,5 +904,12 @@
  "\nRUMBO %1$s": "\nKURS %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  LANDUNG %1$s m auf %2$s°",
  "· La Sequoia aún no cambia de modo: reintentando…": "· Die Sequoia hat den Modus noch nicht gewechselt: neuer Versuch…",
- "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Brillenmodus: Handy in die Brille stecken. Zum Beenden herausnehmen und auf den Bildschirm tippen."
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Brillenmodus: Handy in die Brille stecken. Zum Beenden herausnehmen und auf den Bildschirm tippen.",
+ "ENLACE %1$s": "FUNK %1$s",
+ "SIN GPS": "KEIN GPS",
+ "CASA —": "HOME —",
+ "CASA %1$s": "HOME %1$s",
+ "Las gafas han fallado": "Brillenansicht fehlgeschlagen",
+ "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "Die Brillenansicht der ANAFI hatte einen Fehler und wurde geschlossen. Bitte die Diagnose senden.\n\n%1$s",
+ "RUMBO %1$s": "KURS %1$s"
 }

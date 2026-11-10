@@ -50,8 +50,11 @@ class GogglesView(ctx: Context, private val onSurface: (Surface?) -> Unit) : GLS
     }
 
     /** Texto encima del vídeo (telemetría) y aviso (abajo, con su color). Se puede llamar desde el hilo principal. */
-    fun setOverlay(text: String, alert: String?, alertColor: Int) {
-        r.overlayText = text; r.alertText = alert; r.alertColor = alertColor; r.overlayDirty = true
+    fun setOverlay(text: String, alert: String?, alertColor: Int, homeRelDeg: Float = Float.NaN, homeLabel: String = "", linkLevel: Int = -1) {
+        if (text == r.overlayText && alert == r.alertText && alertColor == r.alertColor && homeLabel == r.homeLabel && linkLevel == r.linkLevel &&
+            (homeRelDeg.isNaN() == r.homeRel.isNaN()) && (homeRelDeg.isNaN() || Math.abs(homeRelDeg - r.homeRel) < 2f)) return
+        r.overlayText = text; r.alertText = alert; r.alertColor = alertColor
+        r.homeRel = homeRelDeg; r.homeLabel = homeLabel; r.linkLevel = linkLevel; r.overlayDirty = true
     }
 
     override fun onDetachedFromWindow() {
@@ -64,6 +67,9 @@ class GogglesView(ctx: Context, private val onSurface: (Surface?) -> Unit) : GLS
         @Volatile var alertText: String? = null
         @Volatile var alertColor = Color.RED
         @Volatile var overlayDirty = true
+        @Volatile var homeRel = Float.NaN
+        @Volatile var homeLabel = ""
+        @Volatile var linkLevel = -1
 
         private var st: SurfaceTexture? = null
         private var surface: Surface? = null
@@ -222,23 +228,60 @@ class GogglesView(ctx: Context, private val onSurface: (Surface?) -> Unit) : GLS
                 ?: Bitmap.createBitmap(lensW, lensH, Bitmap.Config.ARGB_8888).also { ovlBitmap?.recycle(); ovlBitmap = it }
             b.eraseColor(Color.TRANSPARENT)
             val c = Canvas(b)
-            // Letra grande y centrada: los bordes de la lente se ven mal y deformados.
+            // HUD compacto: dos líneas pequeñas arriba, flecha a casa abajo y el centro libre para pilotar.
+            // Se queda dentro del 70 % central de la lente: los bordes se ven deformados.
             val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                textSize = lensH / 15f; setShadowLayer(4f, 0f, 0f, Color.BLACK); textAlign = Paint.Align.CENTER
+                textSize = lensH / 26f; setShadowLayer(3f, 0f, 0f, Color.BLACK); textAlign = Paint.Align.CENTER
             }
+            val bg = Paint().apply { color = 0x77000000 }
             val lines = overlayText.split("\n").filter { it.isNotBlank() }
-            var y = lensH * 0.20f
-            val bg = Paint().apply { color = 0x88000000.toInt() }
-            if (lines.isNotEmpty()) c.drawRect(lensW * 0.12f, y - p.textSize * 1.1f, lensW * 0.88f, y + p.textSize * (lines.size - 1) * 1.15f + p.textSize * 0.4f, bg)
-            for (l in lines) { c.drawText(l, lensW / 2f, y, p); y += p.textSize * 1.15f }
+            // Encoger si alguna línea no cabe en el ancho útil.
+            val maxW = lensW * 0.70f
+            val widest = lines.maxOfOrNull { p.measureText(it) } ?: 0f
+            if (widest > maxW) p.textSize *= maxW / widest
+            val lh = p.textSize * 1.2f
+            var y = lensH * 0.17f + p.textSize
+            if (lines.isNotEmpty()) {
+                val w = minOf(maxW, widest) / 2 + p.textSize * 0.5f
+                c.drawRoundRect(lensW / 2f - w, y - p.textSize * 1.05f, lensW / 2f + w, y + lh * (lines.size - 1) + p.textSize * 0.35f, p.textSize * 0.3f, p.textSize * 0.3f, bg)
+            }
+            for (l in lines) { c.drawText(l, lensW / 2f, y, p); y += lh }
+            // Indicador de calidad del enlace: barras de color a la izquierda de la primera línea.
+            if (linkLevel in 1..5 && lines.isNotEmpty()) {
+                val col = when (linkLevel) { 1 -> 0xFFE74C3C.toInt(); 2 -> 0xFFF39C12.toInt(); 3 -> 0xFFF1C40F.toInt(); else -> 0xFF2ECC71.toInt() }
+                val bw = p.textSize * 0.28f; val bx = lensW / 2f - minOf(maxW, widest) / 2 - p.textSize * 2.6f
+                val base = lensH * 0.17f + p.textSize + lh * 0.5f
+                for (i in 0 until 5) {
+                    val bh = p.textSize * (0.35f + 0.25f * i)
+                    val bp = Paint().apply { color = if (i < linkLevel) col else 0x66FFFFFF }
+                    c.drawRect(bx + i * bw * 1.5f, base - bh, bx + i * bw * 1.5f + bw, base, bp)
+                }
+            }
+            // Flecha a casa: hacia dónde queda la casa respecto al morro del dron (arriba = de frente).
+            val cx = lensW / 2f; val cy = lensH * 0.74f; val rr = lensH * 0.045f
+            if (!homeRel.isNaN() || homeLabel.isNotEmpty()) {
+                c.drawCircle(cx, cy, rr * 1.45f, bg)
+                if (!homeRel.isNaN()) {
+                    val path = android.graphics.Path().apply {
+                        moveTo(0f, -rr); lineTo(rr * 0.62f, rr * 0.75f); lineTo(0f, rr * 0.38f); lineTo(-rr * 0.62f, rr * 0.75f); close()
+                    }
+                    c.save(); c.translate(cx, cy); c.rotate(homeRel)
+                    c.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF00E5FF.toInt(); setShadowLayer(3f, 0f, 0f, Color.BLACK) })
+                    c.restore()
+                } else c.drawText("⌂", cx, cy + p.textSize * 0.35f, p)
+                c.drawText(homeLabel, cx, cy + rr * 1.45f + p.textSize * 1.15f, p)
+            }
             alertText?.takeIf { it.isNotBlank() }?.let { a ->
-                val ap = Paint(p).apply { textSize = lensH / 14f }
+                val ap = Paint(p).apply { textSize = lensH / 22f }
                 val al = a.split("\n").take(2)
-                var ay = lensH * 0.78f
-                c.drawRect(lensW * 0.10f, ay - ap.textSize * 1.1f, lensW * 0.90f, ay + ap.textSize * (al.size - 1) * 1.15f + ap.textSize * 0.5f,
+                val aw = (al.maxOfOrNull { ap.measureText(it) } ?: 0f)
+                if (aw > maxW) ap.textSize *= maxW / aw
+                var ay = lensH * 0.58f
+                val hw = minOf(maxW, aw) / 2 + ap.textSize * 0.5f
+                c.drawRoundRect(cx - hw, ay - ap.textSize * 1.05f, cx + hw, ay + ap.textSize * 1.2f * (al.size - 1) + ap.textSize * 0.4f, ap.textSize * 0.3f, ap.textSize * 0.3f,
                     Paint().apply { color = (alertColor and 0x00FFFFFF) or (0xDD shl 24) })
-                for (l in al) { c.drawText(l, lensW / 2f, ay, ap); ay += ap.textSize * 1.15f }
+                for (l in al) { c.drawText(l, cx, ay, ap); ay += ap.textSize * 1.2f }
             }
             glBindTexture(GL_TEXTURE_2D, ovlTex)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)

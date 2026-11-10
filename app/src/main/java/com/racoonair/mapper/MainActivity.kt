@@ -296,11 +296,18 @@ class MainActivity : Activity(), DroneLink.Listener {
     private fun updateOsd(t: DroneLink.Telemetry) {
         if (!::osd.isInitialized || videoBox.visibility != View.VISIBLE) return
         val d = dronePos(t)
-        val home = plan?.homePoint?.let { LatLon(it.lat, it.lon) } ?: Session.track.firstOrNull()
-        val dist = if (d != null && home != null) "%.0f m".format(GridPlanner.distance(d, home)) else "—"
+        // Casa: la que tiene guardada el dron; si no la ha dicho, la del plan o el primer punto del vuelo.
+        val home = (if (t.homeLat != 500.0) LatLon(t.homeLat, t.homeLon) else null)
+            ?: plan?.homePoint?.let { LatLon(it.lat, it.lon) } ?: Session.track.firstOrNull()
+        homeDist = if (d != null && home != null) GridPlanner.distance(d, home) else Double.NaN
+        // Flecha a casa respecto al morro del dron (0 = de frente). Sin rumbo del dron, sin flecha.
+        homeRel = if (d != null && home != null && !t.yawDeg.isNaN() && homeDist >= 3) ((GridPlanner.bearing(d, home) - t.yawDeg) % 360 + 360) % 360 else Double.NaN
+        val dist = if (homeDist.isNaN()) "—" else "%.0f m".format(homeDist)
+        val arrow = if (homeRel.isNaN()) "" else " " + ARROWS[(((homeRel + 22.5) % 360) / 45).toInt()]
         osd.text = buildString {
             append(trf("ALT %1\$s  VEL %2\$s  BAT %3\$s", fmt(t.altitude, 0, "m"), fmt(t.speed, 1, "m/s"), if (t.battery < 0) "—" else "${t.battery}%"))
-            append(trf("\nCASA %1\$s  ·  GPS %2\$s  ·  %3\$s", dist, if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX", t.flyingState))
+            append("  ·  " + linkText(t))
+            append(trf("\nCASA %1\$s  ·  GPS %2\$s  ·  %3\$s", dist + arrow, if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX", t.flyingState))
             if (fullscreen) {
                 // Para aterrizar a mano (Disco FPV): rumbo y, si hay toma planificada, distancia y rumbo hasta ella.
                 val hdg = if (t.yawDeg.isNaN()) "—" else "%03.0f°".format((t.yawDeg + 360) % 360)
@@ -321,6 +328,23 @@ class MainActivity : Activity(), DroneLink.Listener {
         videoWait.text = if (!link.isConnected) tr("Conecta el dron para ver el vídeo") else tr("Esperando vídeo…")
     }
     private var lastAlertsKey = ""
+    private var homeDist = Double.NaN
+    private var homeRel = Double.NaN
+    private val ARROWS = arrayOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
+
+    /** Calidad del enlace: 1–5 si el dron la da (ANAFI), si no el RSSI en dBm (Disco/Bebop). */
+    private fun linkText(t: DroneLink.Telemetry): String {
+        val bars = if (t.linkQuality in 1..5) "▮".repeat(t.linkQuality) + "▯".repeat(5 - t.linkQuality) else null
+        val dbm = if (t.rssi < 0) "${t.rssi} dBm" else null
+        return trf("ENLACE %1\$s", listOfNotNull(bars, dbm).joinToString(" ").ifEmpty { "—" })
+    }
+
+    /** 1–5 para colorear el enlace en las gafas: la del dron o, a falta de ella, estimada del RSSI. */
+    private fun linkLevel(t: DroneLink.Telemetry): Int = when {
+        t.linkQuality in 1..5 -> t.linkQuality
+        t.rssi < 0 -> when { t.rssi >= -60 -> 5; t.rssi >= -67 -> 4; t.rssi >= -74 -> 3; t.rssi >= -81 -> 2; else -> 1 }
+        else -> -1
+    }
 
     private fun toggleRthOnDisconnect() {
         val t = link.telemetry
@@ -1051,7 +1075,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             fsHolder.visibility = View.VISIBLE
             fsThermal.visibility = if (link.hasThermal) View.VISIBLE else View.GONE
             fsThermal.text = if (link.thermalView) "🌡" else "📷"
-            osd.textSize = 17f
+            osd.textSize = 14f
             setSystemBars(hidden = true)
         } else {
             setGoggles(false)
@@ -1081,12 +1105,17 @@ class MainActivity : Activity(), DroneLink.Listener {
         if (on) {
             if (!fullscreen) setFullscreen(true)
             val osdView = TextView(this).apply {
-                setTextColor(Color.WHITE); textSize = 15f; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                gravity = Gravity.CENTER; setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                setTextColor(Color.WHITE); textSize = 9f; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                gravity = Gravity.CENTER; setShadowLayer(3f, 0f, 0f, Color.BLACK); setBackgroundColor(0x66000000)
             }
             // ANAFI: visor de gafas de GroundSDK (Parrot). Bluegrass/Disco: el nuestro, con el mismo perfil de lentes.
             val v = link.createHmdView(this, FrameLayout(this).apply {
-                addView(osdView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL))
+                addView(osdView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply { topMargin = dp(18) })
+            }, onError = { msg ->
+                // El visor de Parrot ha fallado: se sale de las gafas sin cerrar la app y se deja la traza en el registro.
+                setGoggles(false)
+                AlertDialog.Builder(this).setTitle(tr("Las gafas han fallado")).setMessage(trf("El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1\$s", msg))
+                    .setPositiveButton(android.R.string.ok, null).show()
             })?.also { hmdOsd = osdView } ?: GogglesView(this) { surf -> videoView.setExternalSurface(surf) }.also { gogglesGl = it }
             v.setOnClickListener { setGoggles(false) }
             fsHolder.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -1105,13 +1134,18 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
     }
 
-    /** Telemetría y avisos dentro de la imagen de las gafas. */
+    /** Telemetría y avisos dentro de la imagen de las gafas: dos líneas cortas arriba y la flecha a casa abajo. */
     private fun feedGoggles() {
         if (goggles == null) return
+        val t = link.telemetry
         val alert = if (alertBanner.visibility == View.VISIBLE) alertBanner.text.toString() else null
         val color = if (alert?.startsWith("⛔") == true) C_RED else C_AMBER
-        gogglesGl?.setOverlay(osd.text.toString(), alert, color)
-        hmdOsd?.text = osd.text.toString() + (alert?.let { "\n\n" + it } ?: "")
+        val l1 = trf("ALT %1\$s  VEL %2\$s  BAT %3\$s", fmt(t.altitude, 0, "m"), fmt(t.speed, 1, "m/s"), if (t.battery < 0) "—" else "${t.battery}%")
+        val hdg = if (t.yawDeg.isNaN()) "—" else "%03.0f°".format((t.yawDeg + 360) % 360)
+        val l2 = (if (t.gpsFix) "GPS ${t.satellites}" else tr("SIN GPS")) + "  " + linkText(t) + "  " + trf("RUMBO %1\$s", hdg)
+        val homeLabel = if (homeDist.isNaN()) tr("CASA —") else trf("CASA %1\$s", "%.0f m".format(homeDist))
+        gogglesGl?.setOverlay("$l1\n$l2", alert, color, homeRel.toFloat(), homeLabel, linkLevel(t))
+        hmdOsd?.text = "$l1\n$l2\n" + homeLabel + (if (homeRel.isNaN()) "" else " " + ARROWS[(((homeRel + 22.5) % 360) / 45).toInt()]) + (alert?.let { "\n" + it } ?: "")
     }
 
     private fun setSystemBars(hidden: Boolean) {

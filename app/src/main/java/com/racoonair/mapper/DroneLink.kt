@@ -77,6 +77,13 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         var lon: Double = 500.0,
         var speed: Double = Double.NaN,
         var yawDeg: Double = Double.NaN,
+        /** Calidad del enlace 1 (a punto de perderse) … 5 (muy buena); -1 sin dato. */
+        var linkQuality: Int = -1,
+        /** RSSI del enlace dron-mando en dBm; 0 sin dato. */
+        var rssi: Int = 0,
+        /** Casa que el propio dron tiene guardada (500 = sin dato). */
+        var homeLat: Double = 500.0,
+        var homeLon: Double = 500.0,
         var planState: String = "—",
         /** 0 ejecutando, 1 parado, 2 pausado, 3 cargado, -1 desconocido. */
         var planStateRaw: Int = -1,
@@ -612,7 +619,16 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED to listOf(
                 ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_COMPONENT,
                 ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_STATE),
-            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE_REQUIRED)
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE_REQUIRED),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY_VALUE),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED_RSSI),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED to listOf(ARFeatureSkyController.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED_LEVEL),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED to listOf(
+                ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED_LATITUDE,
+                ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED_LONGITUDE),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED to listOf(
+                ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED_LATITUDE,
+                ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED_LONGITUDE)
         )
     }
 
@@ -621,6 +637,25 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
     private fun handle(key: ARCONTROLLER_DICTIONARY_KEY_ENUM, s: Map<String, Any?>?, all: List<Map<String, Any?>>) {
         val t = telemetry
         when (key) {
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY ->
+                num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY_VALUE)?.let { v ->
+                    val q = v.toInt() and 0x0F; if (q in 1..5) t.linkQuality = q }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED ->
+                num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED_RSSI)?.let { v ->
+                    val r = v.toInt(); if (r in -120..-1) t.rssi = r }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED ->
+                num(s, ARFeatureSkyController.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED_LEVEL)?.let { v ->
+                    val q = v.toInt(); if (q in 1..5) t.linkQuality = q }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED,
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED -> {
+                val home = key == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED
+                val la = num(s, if (home) ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED_LATITUDE
+                                else ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED_LATITUDE)?.toDouble()
+                val lo = num(s, if (home) ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_HOMECHANGED_LONGITUDE
+                                else ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_GPSSETTINGSSTATE_RESETHOMECHANGED_LONGITUDE)?.toDouble()
+                // 500 = el dron aún no tiene casa; 0,0 tampoco vale.
+                if (la != null && lo != null && Math.abs(la) <= 90 && Math.abs(lo) <= 180 && !(la == 0.0 && lo == 0.0)) { t.homeLat = la; t.homeLon = lo }
+            }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED ->
                 num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED_PERCENT)?.let { t.battery = it.toInt(); t.droneLinked = true }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_SKYCONTROLLERSTATE_BATTERYCHANGED ->
@@ -762,7 +797,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         t.battery = -1; t.controllerBattery = -1; t.gpsFix = false; t.satellites = -1; t.droneLinked = false; t.droneModel = 0
         t.accessories = ""; t.sequoiaSeen = false
         t.flyingState = "—"; t.flyingStateRaw = -1; t.altitude = Double.NaN; t.lat = 500.0; t.lon = 500.0
-        t.speed = Double.NaN; t.yawDeg = Double.NaN; t.planState = "—"; t.planStateRaw = -1; t.planPlaying = false; t.planError = ""
+        t.speed = Double.NaN; t.yawDeg = Double.NaN; t.linkQuality = -1; t.rssi = 0; t.homeLat = 500.0; t.homeLon = 500.0; t.planState = "—"; t.planStateRaw = -1; t.planPlaying = false; t.planError = ""
         t.missionItem = -1; t.magnetoCalibrationRequired = null; t.planAvailable = null
         t.alert = -1; t.wind = -1; t.navHomeReason = -1; t.rthBattery = -1; t.motorError = 0
         t.rthOnDisconnect = -1; t.rthOnDisconnectReadOnly = false; t.sensors.clear()

@@ -43,7 +43,7 @@ interface Link {
     /** La pantalla que tenía el visor se cierra. */
     fun releaseStreamView() {}
     /** Modo gafas con el visor del SDK (GroundSDK). null = el enlace no lo tiene (se usa GogglesView). */
-    fun createHmdView(ctx: android.content.Context, overlay: android.view.View): android.view.View? = null
+    fun createHmdView(ctx: android.content.Context, overlay: android.view.View, onError: (String) -> Unit = {}): android.view.View? = null
     fun releaseHmdView() {}
     /** ¿Está llegando vídeo al visor propio? null si el enlace no tiene visor propio. */
     fun streamAlive(): Boolean? = null

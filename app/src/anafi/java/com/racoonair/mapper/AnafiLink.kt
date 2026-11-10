@@ -25,6 +25,7 @@ import com.parrot.drone.groundsdk.device.pilotingitf.Activable
 import com.parrot.drone.groundsdk.device.pilotingitf.FlightPlanPilotingItf
 import com.parrot.drone.groundsdk.device.pilotingitf.ManualCopterPilotingItf
 import com.parrot.drone.groundsdk.device.pilotingitf.ReturnHomePilotingItf
+import com.parrot.drone.groundsdk.device.instrument.Radio
 import com.parrot.drone.groundsdk.facility.AutoConnection
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer
 import com.parrot.drone.groundsdk.device.peripheral.Gimbal
@@ -162,6 +163,11 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             val h = c?.heading ?: return@getInstrument
             if (!telemetry.yawDeg.isNaN() && Math.abs(((h - telemetry.yawDeg + 540.0) % 360.0) - 180.0) < 3.0) return@getInstrument
             telemetry.yawDeg = (h + 360.0) % 360.0; changed()
+        }
+        droneRefs += d.getInstrument(Radio::class.java) { r ->
+            val q = r?.linkSignalQuality ?: -1; val rs = r?.rssi ?: 0
+            val nq = if (q in 0..4) q + 1 else -1   // GroundSDK: 0 (mala) … 4 (muy buena)
+            if (nq != telemetry.linkQuality || Math.abs(rs - telemetry.rssi) >= 3) { telemetry.linkQuality = nq; telemetry.rssi = if (rs < 0) rs else 0; changed() }
         }
         droneRefs += d.getInstrument(FlyingIndicators::class.java) { f -> onFlying(f) }
         droneRefs += d.getInstrument(Alarms::class.java) { a -> onAlarms(a) }
@@ -335,6 +341,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun onRth(r: ReturnHomePilotingItf?) {
         val t = telemetry
         if (r == null) { t.navigateHome = "—"; t.navHomeReason = -1; t.rthBattery = -1; changed(); return }
+        r.homeLocation?.let { h -> if (!(h.latitude == 0.0 && h.longitude == 0.0)) { t.homeLat = h.latitude; t.homeLon = h.longitude } }
         val was = t.navigateHome
         t.navigateHome = when (r.state) {
             Activable.State.ACTIVE -> "en curso"
@@ -433,8 +440,15 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     }
     private var hmdView: GsdkHmdView? = null
 
-    override fun createHmdView(ctx: Context, overlay: android.view.View): android.view.View? = try {
+    override fun createHmdView(ctx: Context, overlay: android.view.View, onError: (String) -> Unit): android.view.View? = try {
         releaseHmdView()
+        // Un fallo del visor de gafas se informa (con su traza) en vez de cerrar la app.
+        GsdkHmdView.sErrorListener = java.util.function.Consumer { t ->
+            val where = t.stackTrace.take(4).joinToString(" ← ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
+            val msg = "${t.javaClass.simpleName}: ${t.message} @ $where"
+            log("Gafas: fallo del visor — $msg")
+            onError(msg)
+        }
         GsdkHmdView(ctx).apply {
             // Paquete de lentes oficial de Parrot (app de ejemplo de GroundSDK); Cockpitglasses 1 y 2 usan el mismo perfil.
             setHmdModel(ctx.resources.getIdentifier("hmd_models", "raw", ctx.packageName), "cockpitGlasses2")
@@ -656,7 +670,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         val t = telemetry
         t.connected = false; t.extension = ""; t.productName = ""; t.battery = -1; t.controllerBattery = -1
         t.gpsFix = false; t.satellites = -1; t.flyingState = "—"; t.flyingStateRaw = -1; t.altitude = Double.NaN
-        t.lat = 500.0; t.lon = 500.0; t.speed = Double.NaN; t.yawDeg = Double.NaN; t.planState = "—"; t.planStateRaw = -1
+        t.lat = 500.0; t.lon = 500.0; t.speed = Double.NaN; t.yawDeg = Double.NaN; t.linkQuality = -1; t.rssi = 0; t.homeLat = 500.0; t.homeLon = 500.0; t.planState = "—"; t.planStateRaw = -1
         t.planPlaying = false; t.planError = ""; t.missionItem = -1; t.planAvailable = null; t.components.clear()
         t.navigateHome = "—"; t.alert = -1; t.wind = -1; t.navHomeReason = -1; t.rthBattery = -1; t.motorError = 0
         t.rthOnDisconnect = -1; t.extraAlerts.clear(); lastMissionItem = -1
