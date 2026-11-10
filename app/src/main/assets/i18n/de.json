@@ -882,5 +882,11 @@
  "Ver foto": "Foto ansehen",
  "en el suelo": "am Boden",
  "posición del dron": "Drohnenposition",
- "🔥 Puntos calientes": "🔥 Hotspots"
+ "🔥 Puntos calientes": "🔥 Hotspots",
+ "Absoluta: colores = °C fijos (lee temperaturas y avisa)": "Absolut: Farben = feste °C (liest Temperaturen und warnt)",
+ "Relativa: máximo contraste, sin temperaturas ni avisos": "Relativ: maximaler Kontrast, ohne Temperaturen und Warnungen",
+ "Ajustes rápidos": "Schnellvorgaben",
+ "Persona": "Person",
+ "Placas solares": "Solarmodule",
+ "Rescoldos": "Glutnester"
 }

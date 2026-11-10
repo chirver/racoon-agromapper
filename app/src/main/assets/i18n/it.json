@@ -882,5 +882,11 @@
  "Ver foto": "Vedi foto",
  "en el suelo": "a terra",
  "posición del dron": "posizione del drone",
- "🔥 Puntos calientes": "🔥 Punti caldi"
+ "🔥 Puntos calientes": "🔥 Punti caldi",
+ "Absoluta: colores = °C fijos (lee temperaturas y avisa)": "Assoluta: colori = °C fissi (legge le temperature e avvisa)",
+ "Relativa: máximo contraste, sin temperaturas ni avisos": "Relativa: massimo contrasto, senza temperature né avvisi",
+ "Ajustes rápidos": "Preimpostazioni",
+ "Persona": "Persona",
+ "Placas solares": "Pannelli solari",
+ "Rescoldos": "Braci"
 }

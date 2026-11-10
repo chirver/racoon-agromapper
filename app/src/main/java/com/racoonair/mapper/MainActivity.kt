@@ -333,7 +333,9 @@ class MainActivity : Activity(), DroneLink.Listener {
         try {
             val o = org.json.JSONObject(s); val d = ThermalPrefs()
             Session.thermal = ThermalPrefs(
-                mode = runCatching { ThermalPaletteMode.valueOf(o.optString("mode")) }.getOrDefault(d.mode),
+                // El modo «búsqueda» (paleta spot) no funciona en el vídeo de la ANAFI: se convierte en absoluta.
+                mode = runCatching { ThermalPaletteMode.valueOf(o.optString("mode")) }.getOrDefault(d.mode)
+                    .let { if (it == ThermalPaletteMode.SEARCH) ThermalPaletteMode.ABSOLUTE else it },
                 min = o.optDouble("min", d.min), max = o.optDouble("max", d.max), threshold = o.optDouble("threshold", d.threshold),
                 alert = o.optBoolean("alert", d.alert), alertTemp = o.optDouble("alertTemp", d.alertTemp),
                 missionLock = o.optBoolean("missionLock", d.missionLock), missionMin = o.optDouble("missionMin", d.missionMin),
@@ -509,15 +511,17 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
         fun chk(lbl: String, v: Boolean) = CheckBox(this).apply { text = lbl; isChecked = v; box.addView(this) }
         box.addView(TextView(this).apply { text = tr("Vídeo térmico"); setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD) })
-        val modes = listOf(ThermalPaletteMode.ABSOLUTE to tr("Absoluta: colores = °C fijos (lee temperaturas)"),
-            ThermalPaletteMode.SEARCH to tr("Búsqueda: solo lo que pase del umbral, en rojo"),
-            ThermalPaletteMode.RELATIVE to tr("Relativa: máximo contraste, sin temperaturas"))
+        val modes = listOf(ThermalPaletteMode.ABSOLUTE to tr("Absoluta: colores = °C fijos (lee temperaturas y avisa)"),
+            ThermalPaletteMode.RELATIVE to tr("Relativa: máximo contraste, sin temperaturas ni avisos"))
         val rg = RadioGroup(this)
         modes.forEachIndexed { i, (m, l) -> rg.addView(RadioButton(this).apply { id = 100 + i; text = l; isChecked = t.mode == m }) }
         box.addView(rg)
+        // Ajustes rápidos: rellenan los campos de abajo (luego «Aplicar»).
+        val presetRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        box.addView(TextView(this).apply { text = tr("Ajustes rápidos"); setTextColor(C_DIM); textSize = 12f; setPadding(0, dp(6), 0, 0) })
+        box.addView(presetRow)
         val eMin = num(tr("Absoluta: mínimo (°C)"), t.min)
         val eMax = num(tr("Absoluta: máximo (°C)"), t.max)
-        val eThr = num(tr("Búsqueda: umbral (°C). Persona al aire libre: 28–32"), t.threshold)
         val cAlert = chk(tr("Avisar y marcar en el mapa los puntos calientes"), t.alert)
         val eAlert = num(tr("Absoluta: avisar a partir de (°C)"), t.alertTemp)
         box.addView(TextView(this).apply { text = tr("Misión (mosaico térmico)"); setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(12), 0, 0) })
@@ -528,6 +532,20 @@ class MainActivity : Activity(), DroneLink.Listener {
         box.addView(TextView(this).apply { text = tr("Inspección (placas solares, búsqueda nocturna)"); setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(12), 0, 0) })
         val eDelta = num(tr("Avisar si algo está X °C por encima de su entorno (0 = no). Placas: 10–15"), t.alertDelta)
         val cPause = chk(tr("En misión: al ver un punto caliente, parar, hacer foto y seguir"), t.pauseOnHot)
+        fun preset(lbl: String, lo: Int, hi: Int, alertAt: Int, delta: Int, pause: Boolean) = presetRow.addView(
+            Button(this).apply {
+                text = lbl; textSize = 12f; isAllCaps = false
+                setOnClickListener {
+                    rg.check(100); eMin.setText(lo.toString()); eMax.setText(hi.toString()); eAlert.setText(alertAt.toString())
+                    eDelta.setText(delta.toString()); cAlert.isChecked = true; cPause.isChecked = pause
+                }
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        // Persona: piel 28–34 °C; de noche o con fresco destaca mucho sobre el suelo.
+        preset(tr("Persona"), 0, 40, 28, 0, false)
+        // Placas solares: célula defectuosa 10–20 °C más caliente que sus vecinas; con sol el panel ronda 40–60 °C.
+        preset(tr("Placas solares"), 10, 90, 85, 12, true)
+        // Rescoldos / incendio: brasas muy por encima del suelo.
+        preset(tr("Rescoldos"), 0, 150, 60, 0, false)
         box.addView(TextView(this).apply {
             setTextColor(C_DIM); textSize = 12f; setPadding(0, dp(8), 0, 0)
             text = tr("La lectura en pantalla es aproximada (±2–3 °C): sirve para encontrar personas, animales o rescoldos, no para medir con certificado. Para un mosaico, elige un rango que cubra todo el terreno (p. ej. 0–40 °C en verano a primera hora).")
@@ -542,7 +560,7 @@ class MainActivity : Activity(), DroneLink.Listener {
                 val at = v(eAlert, t.alertTemp)
                 if (at < lo || at >= hi) Toast.makeText(this, trf("El aviso (%1\$s °C) debe estar dentro del rango %2\$s–%3\$s °C o nunca saltará.", at.toInt(), lo.toInt(), hi.toInt()), Toast.LENGTH_LONG).show()
                 Session.thermal = t.copy(mode = modes.getOrNull(rg.checkedRadioButtonId - 100)?.first ?: t.mode,
-                    min = lo, max = hi, threshold = v(eThr, t.threshold).coerceIn(-20.0, 400.0),
+                    min = lo, max = hi,
                     alert = cAlert.isChecked, alertTemp = at, missionLock = cLock.isChecked,
                     missionMin = mlo, missionMax = mhi, ffcPerPass = cFfc.isChecked,
                     alertDelta = v(eDelta, t.alertDelta).coerceIn(0.0, 100.0), pauseOnHot = cPause.isChecked)

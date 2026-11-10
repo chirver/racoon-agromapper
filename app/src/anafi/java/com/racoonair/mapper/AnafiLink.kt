@@ -530,7 +530,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             val pal: ThermalControl.Palette = if (thermalMission && pr.missionLock) AbsPalette(pr.missionMin, pr.missionMax)
                 else when (pr.mode) {
                     ThermalPaletteMode.ABSOLUTE -> AbsPalette(pr.min, pr.max)
-                    ThermalPaletteMode.SEARCH -> SearchPalette(pr.threshold)
+                    ThermalPaletteMode.SEARCH -> AbsPalette(pr.min, pr.max) // la paleta spot no se aplica al vídeo
                     ThermalPaletteMode.RELATIVE -> IronPalette
                 }
             th.sendPalette(pal)

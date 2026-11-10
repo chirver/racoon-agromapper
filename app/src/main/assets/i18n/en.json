@@ -882,5 +882,11 @@
  "Ver foto": "View photo",
  "en el suelo": "on the ground",
  "posición del dron": "drone position",
- "🔥 Puntos calientes": "🔥 Hot spots"
+ "🔥 Puntos calientes": "🔥 Hot spots",
+ "Absoluta: colores = °C fijos (lee temperaturas y avisa)": "Absolute: colours = fixed °C (reads temperatures and alerts)",
+ "Relativa: máximo contraste, sin temperaturas ni avisos": "Relative: maximum contrast, no temperatures or alerts",
+ "Ajustes rápidos": "Quick presets",
+ "Persona": "Person",
+ "Placas solares": "Solar panels",
+ "Rescoldos": "Embers"
 }

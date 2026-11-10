@@ -55,3 +55,7 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 ## 0.14.3
 - Fix: la app se cerraba al desconectar (GroundSDK paraba su motor mientras desconectaba el mando). La sesión se mantiene viva.
 - Diagnóstico térmico: el registro muestra el modo y los colores que pinta el dron.
+
+## 0.14.4
+- Quitado el modo búsqueda (la ANAFI no aplica la paleta spot al vídeo); la paleta absoluta hace de búsqueda.
+- Ajustes rápidos: Persona, Placas solares, Rescoldos.

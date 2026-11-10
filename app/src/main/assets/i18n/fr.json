@@ -882,5 +882,11 @@
  "Ver foto": "Voir la photo",
  "en el suelo": "au sol",
  "posición del dron": "position du drone",
- "🔥 Puntos calientes": "🔥 Points chauds"
+ "🔥 Puntos calientes": "🔥 Points chauds",
+ "Absoluta: colores = °C fijos (lee temperaturas y avisa)": "Absolue : couleurs = °C fixes (lit les températures et alerte)",
+ "Relativa: máximo contraste, sin temperaturas ni avisos": "Relative : contraste maximal, sans températures ni alertes",
+ "Ajustes rápidos": "Préréglages",
+ "Persona": "Personne",
+ "Placas solares": "Panneaux solaires",
+ "Rescoldos": "Braises"
 }
