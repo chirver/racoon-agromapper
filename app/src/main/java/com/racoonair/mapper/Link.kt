@@ -52,6 +52,10 @@ interface Link {
     fun applyThermalPrefs() {}
     /** Copia del fotograma que se ve (para leer temperaturas). false si no se puede ahora. */
     fun captureFrame(cb: (android.graphics.Bitmap?) -> Unit): Boolean = false
+    /** Foto suelta con la cámara del dron. false si no se puede ahora (p. ej. ya está disparando). */
+    fun takePhoto(): Boolean = false
+    /** Inclinación actual de la cámara en grados (−90 = abajo), o null si no se sabe. */
+    fun gimbalPitch(): Double? = null
 }
 
 /** Opciones del desplegable de conexión. */

@@ -848,5 +848,20 @@
  "Vídeo térmico": "Vidéo thermique",
  "🔥 Punto caliente %1$s: %2$s, %3$s (alt %4$s m). Está bajo el dron o por delante, según la cámara.": "🔥 Point chaud %1$s : %2$s, %3$s (alt %4$s m). Il est sous le drone ou devant, selon la caméra.",
  "🔥 Punto caliente a la vista, pero el dron no tiene GPS: no se puede marcar en el mapa.": "🔥 Point chaud en vue, mais le drone n'a pas de GPS : impossible de le marquer sur la carte.",
- "El aviso (%1$s °C) debe estar dentro del rango %2$s–%3$s °C o nunca saltará.": "L'alerte (%1$s °C) doit être dans la plage %2$s–%3$s °C, sinon elle ne se déclenchera jamais."
+ "El aviso (%1$s °C) debe estar dentro del rango %2$s–%3$s °C o nunca saltará.": "L'alerte (%1$s °C) doit être dans la plage %2$s–%3$s °C, sinon elle ne se déclenchera jamais.",
+ "Térmica: no se pudo copiar el fotograma del vídeo.": "Thermique : impossible de copier l'image vidéo.",
+ "Térmica: el vídeo no tiene los colores de la paleta (¿el dron no la ha aplicado?).": "Thermique : la vidéo n'a pas les couleurs de la palette (le drone ne l'a pas appliquée ?).",
+ "Térmica: colores de la paleta no reconocidos (%1$s muestras válidas).": "Thermique : couleurs de la palette non reconnues (%1$s échantillons valides).",
+ "Térmica: lectura OK · máx %1$s · caliente %2$s %% de la imagen.": "Thermique : lecture OK · max %1$s · chaud %2$s %% de l'image.",
+ "Térmica: el visor de vídeo aún no permite copiar fotogramas.": "Thermique : la vue vidéo ne permet pas encore de copier des images.",
+ "Avisar si algo está X °C por encima de su entorno (0 = no). Placas: 10–15": "Alerter si un point dépasse son environnement de X °C (0 = non). Panneaux : 10–15",
+ "En misión: al ver un punto caliente, parar, hacer foto y seguir": "En mission : sur un point chaud, s'arrêter, prendre une photo et continuer",
+ "Inspección (placas solares, búsqueda nocturna)": "Inspection (panneaux solaires, recherche de nuit)",
+ "La cámara ya estaba disparando las fotos del plan: el punto queda en esas fotos.": "La caméra prenait déjà les photos du plan : le point figure sur ces photos.",
+ "Misión en pausa para fotografiar el punto caliente…": "Mission en pause pour photographier le point chaud…",
+ "Misión reanudada.": "Mission reprise.",
+ "No reanudo la misión: ha cambiado algo mientras tanto. Sigue tú.": "Je ne reprends pas la mission : quelque chose a changé entre-temps. À vous.",
+ "entorno %1$s": "environnement %1$s",
+ "📸 Foto del punto caliente hecha (va con la posición GPS del dron).": "📸 Photo du point chaud prise (avec la position GPS du drone).",
+ "🔥 Punto caliente %1$s: %2$s en %3$s (posición en el suelo, ±%4$s m).": "🔥 Point chaud %1$s : %2$s à %3$s (position au sol, ±%4$s m)."
 }

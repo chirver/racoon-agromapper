@@ -30,11 +30,17 @@ data class ThermalPrefs(
     val missionMin: Double = 0.0,
     val missionMax: Double = 40.0,
     /** Mosaico térmico: calibrar el sensor (obturador) en cada giro, nunca en mitad de una pasada. */
-    val ffcPerPass: Boolean = true
+    val ffcPerPass: Boolean = true,
+    /** Aviso por diferencia con el entorno (°C sobre la mediana de la imagen; 0 = no). Placas solares, noche. */
+    val alertDelta: Double = 0.0,
+    /** En misión: al ver un punto caliente, parar, hacer foto con la cámara del dron y seguir. */
+    val pauseOnHot: Boolean = false
 )
 
 /** Punto caliente detectado en vuelo. */
-data class Hotspot(val lat: Double, val lon: Double, val alt: Double, val tempC: Double?, val time: Long, val file: String?)
+data class Hotspot(val lat: Double, val lon: Double, val alt: Double, val tempC: Double?, val time: Long, val file: String?,
+                   /** true = posición del punto en el suelo (proyectada desde la cámara); false = posición del dron. */
+                   val projected: Boolean = false)
 
 object ThermalPalettes {
     class Stop(val pos: Double, val r: Double, val g: Double, val b: Double)
@@ -67,11 +73,12 @@ object ThermalScan {
      * [maxC]/[centerC]: temperaturas estimadas (solo paleta absoluta). [hot]: hay un punto que dispara el aviso.
      * [hx]/[hy]: posición relativa (0..1) del punto más caliente en el fotograma.
      */
-    data class Result(val maxC: Double?, val centerC: Double?, val hot: Boolean, val hotPixels: Int, val hx: Float, val hy: Float)
+    data class Result(val maxC: Double?, val centerC: Double?, val hot: Boolean, val hotPixels: Int, val hx: Float, val hy: Float,
+                      val valid: Int = 0, val medianC: Double? = null)
 
-    /** Un punto caliente es algo pequeño: entre el 0,05 % y el 5 % de la imagen. Más = suelo caliente, no aviso. */
+    /** Un punto caliente ocupa entre el 0,05 % y el 30 % de la imagen. Más = todo el suelo caliente, no aviso. */
     private const val HOT_MIN_FRAC = 0.0005
-    private const val HOT_MAX_FRAC = 0.05
+    private const val HOT_MAX_FRAC = 0.30
 
     private const val COLS = 96
     private const val ROWS = 72
@@ -82,54 +89,88 @@ object ThermalScan {
         val w = bmp.width; val h = bmp.height
         if (w < COLS || h < ROWS) return Result(null, null, false, 0, 0.5f, 0.5f)
         val px = IntArray(w)
-        val temps = ArrayList<Double>(COLS * ROWS)
-        var best = -1e9; var bx = 0.5f; var by = 0.5f
-        var hotN = 0; var hotSumX = 0f; var hotSumY = 0f; var valid = 0
-        val center = ArrayList<Double>()
+        val n = COLS * ROWS
+        val tv = DoubleArray(n); val xs = FloatArray(n); val ys = FloatArray(n)
+        var k = 0; var valid = 0
+        var minX = 1f; var maxX = 0f; var minY = 1f; var maxY = 0f
+        var hotN = 0; var hotSumX = 0f; var hotSumY = 0f
         val span = p.max - p.min
         for (j in 0 until ROWS) {
             val y = ((j + 0.5) * h / ROWS).toInt()
             bmp.getPixels(px, 0, w, 0, y, w, 1)
             for (i in 0 until COLS) {
-                val x = ((i + 0.5) * w / COLS).toInt()
-                val c = px[x]
+                val c = px[((i + 0.5) * w / COLS).toInt()]
                 val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
                 if (r + g + b < 12) continue // bandas negras alrededor del vídeo: no son imagen
-                valid++
                 val fx = (i + 0.5f) / COLS; val fy = (j + 0.5f) / ROWS
+                valid++
+                if (fx < minX) minX = fx; if (fx > maxX) maxX = fx; if (fy < minY) minY = fy; if (fy > maxY) maxY = fy
                 when (p.mode) {
-                    ThermalPaletteMode.SEARCH -> {
+                    ThermalPaletteMode.SEARCH ->
                         // Rojo/naranja/amarillo saturado = por encima del umbral; gris = por debajo.
                         if (r > 170 && r - b > 120 && g < r - 10 && b < 110) { hotN++; hotSumX += fx; hotSumY += fy }
-                    }
                     ThermalPaletteMode.ABSOLUTE -> {
-                        val k = nearest(r, g, b) ?: continue
-                        val t = p.min + span * k / 255.0
-                        temps.add(t)
-                        if (t > best) { best = t; bx = fx; by = fy }
-                        if (fx in 0.46f..0.54f && fy in 0.45f..0.55f) center.add(t)
-                        if (t >= p.alertTemp) { hotN++; hotSumX += fx; hotSumY += fy }
+                        val idx = nearest(r, g, b) ?: continue
+                        tv[k] = p.min + span * idx / 255.0; xs[k] = fx; ys[k] = fy; k++
                     }
                     ThermalPaletteMode.RELATIVE -> {}
                 }
             }
         }
+        // Posición relativa a la imagen real (sin bandas negras), para poder proyectarla al suelo.
+        fun nx(x: Float) = if (maxX > minX) ((x - minX) / (maxX - minX)).coerceIn(0f, 1f) else 0.5f
+        fun ny(y: Float) = if (maxY > minY) ((y - minY) / (maxY - minY)).coerceIn(0f, 1f) else 0.5f
         return when (p.mode) {
             ThermalPaletteMode.ABSOLUTE -> {
-                if (temps.size < 50) return Result(null, null, false, 0, 0.5f, 0.5f)
-                temps.sort()
+                if (k < 50) return Result(null, null, false, 0, 0.5f, 0.5f, valid)
+                val sorted = tv.copyOf(k).also { it.sort() }
                 // Percentil 99,7 en vez del máximo: un píxel suelto de compresión no dispara nada.
-                val maxC = temps[min(temps.size - 1, (temps.size * 0.997).toInt())]
+                val maxC = sorted[min(k - 1, (k * 0.997).toInt())]
+                val median = sorted[k / 2]
+                // Umbral: absoluto, o «X °C más que el entorno» (placas solares, búsqueda nocturna).
+                val thr = if (p.alertDelta > 0) min(p.alertTemp, median + p.alertDelta) else p.alertTemp
+                val center = ArrayList<Double>()
+                var bx = 0.5f; var by = 0.5f; var best = -1e9
+                for (q in 0 until k) {
+                    val t = tv[q]
+                    if (t > best) { best = t; bx = xs[q]; by = ys[q] }
+                    if (xs[q] in 0.46f..0.54f && ys[q] in 0.45f..0.55f) center.add(t)
+                    if (t >= thr) { hotN++; hotSumX += xs[q]; hotSumY += ys[q] }
+                }
                 val c = if (center.isEmpty()) null else center.sorted()[center.size / 2]
-                val hot = p.alert && isSpot(hotN, valid)
-                Result(maxC, c, hot, hotN, if (hotN > 0) hotSumX / hotN else bx, if (hotN > 0) hotSumY / hotN else by)
+                val hot = p.alert && isSpot(hotN, k)
+                Result(maxC, c, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else bx), ny(if (hotN > 0) hotSumY / hotN else by), k, median)
             }
             ThermalPaletteMode.SEARCH -> {
                 val hot = p.alert && isSpot(hotN, valid)
-                Result(null, null, hot, hotN, if (hotN > 0) hotSumX / hotN else 0.5f, if (hotN > 0) hotSumY / hotN else 0.5f)
+                Result(null, null, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else 0.5f), ny(if (hotN > 0) hotSumY / hotN else 0.5f), valid)
             }
-            else -> Result(null, null, false, 0, 0.5f, 0.5f)
+            else -> Result(null, null, false, 0, 0.5f, 0.5f, valid)
         }
+    }
+
+    /**
+     * Punto del suelo que se ve en (fx, fy) de la imagen térmica. Suelo plano a la altura del despegue.
+     * [pitchDeg]: inclinación de la cámara (−90 = mirando abajo). FOV de la térmica de la ANAFI Thermal ≈ 50° × 38°.
+     * null si ese punto de la imagen está por encima del horizonte o demasiado lejos.
+     */
+    fun projectToGround(lat: Double, lon: Double, altAgl: Double, yawDeg: Double, pitchDeg: Double,
+                        fx: Float, fy: Float, hfovDeg: Double = 50.0, vfovDeg: Double = 38.0): LatLon? {
+        if (altAgl.isNaN() || altAgl < 1 || yawDeg.isNaN() || pitchDeg.isNaN()) return null
+        val p = Math.toRadians(pitchDeg)
+        val x = (fx - 0.5) * 2 * Math.tan(Math.toRadians(hfovDeg / 2))
+        val y = (0.5 - fy) * 2 * Math.tan(Math.toRadians(vfovDeg / 2))
+        // Rayo en ejes (adelante, derecha, arriba) del dron
+        val fwd = Math.cos(p) - y * Math.sin(p)
+        val up = Math.sin(p) + y * Math.cos(p)
+        if (up > -0.05) return null
+        val t = altAgl / -up
+        val f = t * fwd; val r = t * x
+        val yaw = Math.toRadians(yawDeg)
+        val north = f * Math.cos(yaw) - r * Math.sin(yaw)
+        val east = f * Math.sin(yaw) + r * Math.cos(yaw)
+        if (Math.hypot(north, east) > 500) return null
+        return LatLon(lat + north / 110540.0, lon + east / (111320.0 * Math.cos(Math.toRadians(lat))))
     }
 
     private fun isSpot(n: Int, valid: Int) = valid > 200 && n >= 3 && n.toDouble() / valid in HOT_MIN_FRAC..HOT_MAX_FRAC

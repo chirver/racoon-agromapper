@@ -27,6 +27,7 @@ import com.parrot.drone.groundsdk.device.pilotingitf.ManualCopterPilotingItf
 import com.parrot.drone.groundsdk.device.pilotingitf.ReturnHomePilotingItf
 import com.parrot.drone.groundsdk.facility.AutoConnection
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer
+import com.parrot.drone.groundsdk.device.peripheral.Gimbal
 import com.parrot.drone.groundsdk.device.peripheral.stream.CameraLive
 import com.parrot.drone.groundsdk.stream.GsdkStreamView
 import java.io.File
@@ -62,6 +63,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private var manual: ManualCopterPilotingItf? = null
     private var thermal: ThermalControl? = null
     private var mainCam: MainCamera? = null
+    private var gimbal: Gimbal? = null
     private var thermalCam: ThermalCamera? = null
     private var model: Drone.Model? = null
     private var lastMissionItem = -1
@@ -118,7 +120,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         thermalMission = false
         try { liveRef?.close() } catch (_: Throwable) {}
         liveRef = null; live = null; try { streamView?.setStream(null) } catch (_: Throwable) {}
-        mainCam = null; thermalCam = null
+        mainCam = null; thermalCam = null; gimbal = null
     }
 
     private fun closeRc() {
@@ -188,6 +190,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             if (liveRef == null) liveRef = s.live { cl -> live = cl; bindStream() }
         }
         droneRefs += d.getPeripheral(MainCamera::class.java) { c -> mainCam = c; camActive("RGB", c?.isActive) }
+        droneRefs += d.getPeripheral(Gimbal::class.java) { g -> gimbal = g }
         droneRefs += d.getPeripheral(ThermalCamera::class.java) { c -> thermalCam = c; camActive("térmica", c?.isActive) }
     }
 
@@ -478,6 +481,19 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     }
 
     override fun applyThermalPrefs() = applyThermalView()
+
+    override fun gimbalPitch(): Double? = try {
+        gimbal?.let { g -> if (Gimbal.Axis.PITCH in g.supportedAxes) g.getAttitude(Gimbal.Axis.PITCH, Gimbal.FrameOfReference.ABSOLUTE) else null }
+    } catch (_: Throwable) { null }
+
+    override fun takePhoto(): Boolean {
+        val cam = activeCamera() ?: mainCam ?: return false
+        return try {
+            if (cam.mode().value != com.parrot.drone.groundsdk.device.peripheral.camera.Camera.Mode.PHOTO) return false
+            if (!cam.canStartPhotoCapture()) return false
+            cam.startPhotoCapture(); log("Foto ✓"); true
+        } catch (t: Throwable) { log("Foto: ${t.message}"); false }
+    }
 
     override fun captureFrame(cb: (android.graphics.Bitmap?) -> Unit): Boolean {
         val v = streamView ?: return false

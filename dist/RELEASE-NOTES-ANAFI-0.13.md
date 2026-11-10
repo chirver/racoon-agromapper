@@ -40,3 +40,9 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 - Detector de puntos calientes para búsqueda y rescate: pita, guarda la imagen y marca la posición en el mapa y en el KML.
 - Mosaico térmico: paleta fija durante la misión y calibración del sensor en cada giro (nunca a mitad de pasada); aviso en el planificador si el solape o la velocidad no valen para térmica.
 - Reanudar tras cambio de batería verificado para cuadrículas ANAFI.
+
+## 0.14.1
+- Detector: un objeto cercano que ocupa mucha imagen ya avisa (antes se descartaba como «suelo caliente»); diagnóstico de la lectura en el registro.
+- Aviso por diferencia con el entorno (placas solares, búsqueda nocturna).
+- Posición del punto caliente proyectada al suelo con la inclinación del gimbal, el rumbo y la altura.
+- Inspección: en misión, al ver un punto caliente para, hace foto con la cámara del dron y sigue.
