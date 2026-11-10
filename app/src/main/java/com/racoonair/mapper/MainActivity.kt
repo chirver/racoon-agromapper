@@ -84,6 +84,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         link = existing ?: Flavor.newLink(Flavor.platforms.first(), applicationContext, this).also { Session.link = it }
         link.listener = this
         loadThermalPrefs()
+        if (Session.hotspots.isEmpty()) Session.hotspots.addAll(HotspotStore.load(this))
         setContentView(buildUi())
         if (existing == null && !Flavor.supports(Platform.BLUEGRASS_SEQUOIA)) {
             onLog(tr("Enciende el SkyController 3 y la ANAFI, conecta el mando por USB y pulsa Conectar."))
@@ -423,7 +424,18 @@ class MainActivity : Activity(), DroneLink.Listener {
         val now = System.currentTimeMillis()
         val h = Hotspot(pos.lat, pos.lon, t.altitude, r.maxC, now, file, ground != null)
         Session.hotspots.add(h)
+        val idx = Session.hotspots.size - 1
+        HotspotStore.save(this, Session.hotspots)
         flightMap.hotspots = Session.hotspots.map { LatLon(it.lat, it.lon) }
+        // Foto a la galería con la posición del punto en el EXIF (fuera del hilo principal).
+        if (file != null) scanExec.execute {
+            val pub = HotspotStore.geotagAndPublish(applicationContext, file, h, idx + 1)
+            if (pub != null) runOnUiThread {
+                if (idx < Session.hotspots.size && Session.hotspots[idx].time == h.time) {
+                    Session.hotspots[idx] = h.copy(file = pub); HotspotStore.save(this, Session.hotspots)
+                }
+            }
+        }
         val coords = "%.6f".format(java.util.Locale.ROOT, pos.lat) + ", " + "%.6f".format(java.util.Locale.ROOT, pos.lon)
         val temp = r.maxC?.let { "%.1f °C".format(it) + (r.medianC?.let { m -> " (" + trf("entorno %1\$s", "%.0f °C".format(m)) + ")" } ?: "") }
             ?: ">" + "%.0f °C".format(Session.thermal.threshold)
@@ -431,6 +443,35 @@ class MainActivity : Activity(), DroneLink.Listener {
               else trf("🔥 Punto caliente %1\$s: %2\$s, %3\$s (alt %4\$s m). Está bajo el dron o por delante, según la cámara.",
                   Session.hotspots.size, temp, coords, if (t.altitude.isNaN()) "—" else "%.0f".format(t.altitude)))
         if (Session.thermal.pauseOnHot && t.planPlaying) inspectHotspot()
+    }
+
+    /** Lista de puntos calientes: ver en el mapa, ir con Google Maps, compartir, foto; exportar CSV/KML. */
+    private fun hotspotsDialog() {
+        val list = Session.hotspots.toList()
+        if (list.isEmpty()) { Toast.makeText(this, tr("No hay puntos calientes"), Toast.LENGTH_SHORT).show(); return }
+        val items = list.mapIndexed { i, h -> HotspotStore.label(i, h) + "\n" + HotspotStore.coords(h) }.toTypedArray()
+        AlertDialog.Builder(this).setTitle(trf("Puntos calientes (%1\$s)", list.size))
+            .setItems(items) { _, i -> hotspotActions(i, list[i]) }
+            .setNeutralButton(tr("CSV")) { _, _ -> HotspotStore.exportCsv(this, list) }
+            .setPositiveButton(tr("KML")) { _, _ -> exportFlightKml() }
+            .setNegativeButton(tr("Cerrar"), null).show()
+    }
+
+    private fun hotspotActions(i: Int, h: Hotspot) {
+        val acts = arrayOf(tr("Ver en el mapa"), tr("Ir con Google Maps"), tr("Compartir coordenadas"), tr("Ver foto"))
+        AlertDialog.Builder(this).setTitle(HotspotStore.label(i, h)).setItems(acts) { _, k ->
+            when (k) {
+                0 -> {
+                    setViewMode(false)
+                    val d = 0.0004
+                    follow = false; updateFollowBtn()
+                    flightMap.fit(listOf(LatLon(h.lat - d, h.lon - d), LatLon(h.lat + d, h.lon + d)))
+                }
+                1 -> HotspotStore.openInMaps(this, i, h)
+                2 -> HotspotStore.shareOne(this, i, h)
+                else -> HotspotStore.openPhoto(this, h)
+            }
+        }.show()
     }
 
     /** Inspección: parar la misión, foto con la cámara del dron (RGB + térmica, con GPS en la foto) y seguir. */
@@ -493,7 +534,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         })
         AlertDialog.Builder(this).setTitle(tr("Térmica")).setView(ScrollView(this).apply { addView(box) })
             .setNegativeButton(tr("Cancelar"), null)
-            .setNeutralButton(tr("Borrar puntos")) { _, _ -> Session.hotspots.clear(); flightMap.hotspots = emptyList(); onLog(tr("Puntos calientes borrados.")) }
+            .setNeutralButton(tr("Borrar puntos")) { _, _ -> Session.hotspots.clear(); HotspotStore.save(this, Session.hotspots); flightMap.hotspots = emptyList(); onLog(tr("Puntos calientes borrados.")) }
             .setPositiveButton(tr("Aplicar")) { _, _ ->
                 fun v(e: EditText, d: Double) = e.text.toString().replace(',', '.').toDoubleOrNull() ?: d
                 val lo = v(eMin, t.min).coerceIn(-40.0, 395.0); val hi = v(eMax, t.max).coerceIn(lo + 5, 400.0)
@@ -888,7 +929,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         mt.addView(row(followBtn, button(tr("Ver plan"), C_GREY) { follow = false; updateFollowBtn(); fitFlightMap() }))
         mt.addView(row(button(tr("Borrar rastro"), C_GREY) { Session.track.clear(); flightMap.track = emptyList() },
             button(tr("Compartir log"), C_GREY) { shareLastFlight() }))
-        mt.addView(row(button(tr("Exportar KML"), C_GREY) { exportFlightKml() }))
+        mt.addView(row(button(tr("Exportar KML"), C_GREY) { exportFlightKml() }, button(tr("🔥 Puntos calientes"), C_GREY) { hotspotsDialog() }))
         root.addView(mt); mapToolsCard = mt
 
         // Misión

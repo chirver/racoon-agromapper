@@ -46,3 +46,8 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 - Aviso por diferencia con el entorno (placas solares, búsqueda nocturna).
 - Posición del punto caliente proyectada al suelo con la inclinación del gimbal, el rumbo y la altura.
 - Inspección: en misión, al ver un punto caliente para, hace foto con la cámara del dron y sigue.
+
+## 0.14.2
+- Lista de puntos calientes (🔥 en la pantalla de vuelo): ver en el mapa, ir con Google Maps, compartir coordenadas, ver foto; exportar CSV o KML.
+- Los puntos se guardan al momento y sobreviven a cerrar la app.
+- Fotos de los puntos en la galería (Imágenes/RacoonAgroMapper) con la posición del punto en el EXIF.
