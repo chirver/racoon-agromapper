@@ -888,5 +888,14 @@
  "Ajustes rápidos": "Schnellvorgaben",
  "Persona": "Person",
  "Placas solares": "Solarmodule",
- "Rescoldos": "Glutnester"
+ "Rescoldos": "Glutnester",
+ "\nSin fotos programadas · ruta %.0f m · tiempo estimado %.1f min": "\nKeine geplanten Fotos · Route %.0f m · geschätzte Zeit %.1f min",
+ "A esta altura cada píxel térmico mide %1$s cm: una célula solar defectuosa (~15 cm) puede no verse. Para placas, 30–40 m.": "In dieser Höhe misst jedes Wärmebildpixel %1$s cm: eine defekte Zelle (~15 cm) ist evtl. nicht sichtbar. Für Module 30–40 m.",
+ "Barrido rápido con la cámara térmica mirando abajo, sin fotogrametría. Las pasadas se separan según lo que ve la térmica. Altura y velocidad: campos «Altura» y «Velocidad» (placas solares: 30–40 m y 6–8 m/s). Con «parar, hacer foto y seguir» en 🎚, el dron se detiene a fotografiar cada punto caliente.": "Schneller Überflug mit nach unten gerichteter Wärmebildkamera, ohne Photogrammetrie. Die Bahnen richten sich nach dem Sichtfeld der Wärmebildkamera. Höhe und Geschwindigkeit: Felder „Höhe“ und „Geschwindigkeit“ (Solarmodule: 30–40 m und 6–8 m/s). Mit „anhalten, Foto machen und weiter“ in 🎚 hält die Drohne an jedem Hotspot für ein Foto.",
+ "INSPECCIÓN TÉRMICA · %d pasadas cada %.0f m · franja térmica %.0f m · píxel %.0f cm · %.1f m/s": "WÄRMEBILD-INSPEKTION · %d Bahnen alle %.0f m · Streifen %.0f m · Pixel %.0f cm · %.1f m/s",
+ "Inspección térmica (barrido rápido)": "Wärmebild-Inspektion (schneller Überflug)",
+ "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Wärmebild-Inspektion: Tippe die Ecken des Solarparks oder der Zone an (mindestens 3).",
+ "Inspección térmica: vuela a 10 m o más.": "Wärmebild-Inspektion: in 10 m oder höher fliegen.",
+ "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Über 10 m/s: Das Wärmebild verwischt und der Detektor kann kleine Punkte übersehen.",
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Vor dem Start Video auf Wärmebild mit absoluter Palette und aktivierter Warnung stellen: Der Detektor inspiziert."
 }

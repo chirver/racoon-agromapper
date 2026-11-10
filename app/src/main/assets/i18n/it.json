@@ -888,5 +888,14 @@
  "Ajustes rápidos": "Preimpostazioni",
  "Persona": "Persona",
  "Placas solares": "Pannelli solari",
- "Rescoldos": "Braci"
+ "Rescoldos": "Braci",
+ "\nSin fotos programadas · ruta %.0f m · tiempo estimado %.1f min": "\nNessuna foto programmata · percorso %.0f m · tempo stimato %.1f min",
+ "A esta altura cada píxel térmico mide %1$s cm: una célula solar defectuosa (~15 cm) puede no verse. Para placas, 30–40 m.": "A questa quota ogni pixel termico misura %1$s cm: una cella difettosa (~15 cm) può non vedersi. Per i pannelli, 30–40 m.",
+ "Barrido rápido con la cámara térmica mirando abajo, sin fotogrametría. Las pasadas se separan según lo que ve la térmica. Altura y velocidad: campos «Altura» y «Velocidad» (placas solares: 30–40 m y 6–8 m/s). Con «parar, hacer foto y seguir» en 🎚, el dron se detiene a fotografiar cada punto caliente.": "Passaggio rapido con la termica rivolta in basso, senza fotogrammetria. Le passate sono distanziate secondo ciò che vede la termica. Quota e velocità: campi «Altezza» e «Velocità» (pannelli solari: 30–40 m e 6–8 m/s). Con «fermarsi, foto e proseguire» in 🎚, il drone si ferma a fotografare ogni punto caldo.",
+ "INSPECCIÓN TÉRMICA · %d pasadas cada %.0f m · franja térmica %.0f m · píxel %.0f cm · %.1f m/s": "ISPEZIONE TERMICA · %d passate ogni %.0f m · fascia termica %.0f m · pixel %.0f cm · %.1f m/s",
+ "Inspección térmica (barrido rápido)": "Ispezione termica (passaggio rapido)",
+ "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Ispezione termica: tocca gli angoli dell'impianto solare o della zona (minimo 3).",
+ "Inspección térmica: vuela a 10 m o más.": "Ispezione termica: vola a 10 m o più.",
+ "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Oltre 10 m/s: l'immagine termica è mossa e il rilevatore può perdere punti piccoli.",
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Metti il video in termica con la tavolozza assoluta e l'avviso attivo prima del decollo: è il rilevatore che ispeziona."
 }

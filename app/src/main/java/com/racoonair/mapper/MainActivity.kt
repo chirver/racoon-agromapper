@@ -361,7 +361,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         val on = thermalActive()
         thermalOverlay.visibility = if (on) View.VISIBLE else View.GONE
         val t = Session.thermal
-        val inMission = link.telemetry.planPlaying && t.missionLock
+        val inMission = link.telemetry.planPlaying && t.missionLock && plan?.items?.any { it.command == FlightPlan.CMD_IMAGE_START } == true
         thermalOverlay.prefs = if (inMission) t.copy(mode = ThermalPaletteMode.ABSOLUTE, min = t.missionMin, max = t.missionMax) else t
         thermalOverlay.note = if (inMission) trf("Paleta fija de misión %1\$s–%2\$s °C", t.missionMin.toInt(), t.missionMax.toInt()) else ""
         if (!on) thermalOverlay.result = null

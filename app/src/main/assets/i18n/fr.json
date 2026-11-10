@@ -888,5 +888,14 @@
  "Ajustes rápidos": "Préréglages",
  "Persona": "Personne",
  "Placas solares": "Panneaux solaires",
- "Rescoldos": "Braises"
+ "Rescoldos": "Braises",
+ "\nSin fotos programadas · ruta %.0f m · tiempo estimado %.1f min": "\nSans photos programmées · trajet %.0f m · durée estimée %.1f min",
+ "A esta altura cada píxel térmico mide %1$s cm: una célula solar defectuosa (~15 cm) puede no verse. Para placas, 30–40 m.": "À cette hauteur chaque pixel thermique mesure %1$s cm : une cellule défectueuse (~15 cm) peut passer inaperçue. Pour les panneaux, 30–40 m.",
+ "Barrido rápido con la cámara térmica mirando abajo, sin fotogrametría. Las pasadas se separan según lo que ve la térmica. Altura y velocidad: campos «Altura» y «Velocidad» (placas solares: 30–40 m y 6–8 m/s). Con «parar, hacer foto y seguir» en 🎚, el dron se detiene a fotografiar cada punto caliente.": "Balayage rapide caméra thermique vers le bas, sans photogrammétrie. Les passages sont espacés selon ce que voit la thermique. Hauteur et vitesse : champs « Hauteur » et « Vitesse » (panneaux solaires : 30–40 m et 6–8 m/s). Avec « s'arrêter, photo et continuer » dans 🎚, le drone s'arrête pour photographier chaque point chaud.",
+ "INSPECCIÓN TÉRMICA · %d pasadas cada %.0f m · franja térmica %.0f m · píxel %.0f cm · %.1f m/s": "INSPECTION THERMIQUE · %d passages tous les %.0f m · bande thermique %.0f m · pixel %.0f cm · %.1f m/s",
+ "Inspección térmica (barrido rápido)": "Inspection thermique (balayage rapide)",
+ "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Inspection thermique : touchez les coins de la centrale solaire ou de la zone (3 minimum).",
+ "Inspección térmica: vuela a 10 m o más.": "Inspection thermique : volez à 10 m ou plus.",
+ "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Plus de 10 m/s : l'image thermique est floue et le détecteur peut manquer de petits points.",
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Passez la vidéo en thermique avec la palette absolue et l'alerte activée avant le décollage : c'est le détecteur qui inspecte."
 }

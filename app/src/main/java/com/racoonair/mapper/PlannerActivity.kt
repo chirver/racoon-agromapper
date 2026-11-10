@@ -543,7 +543,7 @@ class PlannerActivity : Activity(), MapView.Listener {
         val (v7, eE) = field(tr("Desnivel base del objeto − despegue (m)"), fmt(s.baseElev), "0")
         // Inclinación y desnivel son negativos a menudo: teclado con signo.
         for (e in listOf(eT, eE)) e.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
-        box.addView(v1)
+        if (s.type != MissionType.THERMAL_SCAN) box.addView(v1)
         when (s.type) {
             MissionType.ORBIT -> { box.addView(v2); box.addView(v3); box.addView(v5); box.addView(v6); box.addView(v7) }
             MissionType.FACADE -> { box.addView(v2); box.addView(v5); box.addView(v6); box.addView(v7) }
@@ -555,6 +555,7 @@ class PlannerActivity : Activity(), MapView.Listener {
             text = when (s.type) {
                 MissionType.ORBIT -> tr("Anillos alrededor del objeto con la cámara apuntando a su centro. Más anillos = mejor modelo, más tiempo. Para estatuas, 2–3 anillos a 8–12 m.")
                 MissionType.FACADE -> tr("Filas horizontales de abajo arriba frente a la pared, cámara horizontal. Distancia típica 8–15 m.")
+                MissionType.THERMAL_SCAN -> tr("Barrido rápido con la cámara térmica mirando abajo, sin fotogrametría. Las pasadas se separan según lo que ve la térmica. Altura y velocidad: campos «Altura» y «Velocidad» (placas solares: 30–40 m y 6–8 m/s). Con «parar, hacer foto y seguir» en 🎚, el dron se detiene a fotografiar cada punto caliente.")
                 MissionType.OBLIQUE -> tr("Dos cuadrículas cruzadas con la cámara inclinada. −60° es un buen punto de partida; −45° ve más fachada, −75° más tejado. La altura de vuelo es la del campo «Altura».")
                 else -> ""
             } + "\n\n" + tr("Desnivel: si despegas más abajo o más arriba que la base del objeto, indica la diferencia (positivo = el objeto está más alto). Las alturas se calculan desde el despegue.")
@@ -754,6 +755,7 @@ class PlannerActivity : Activity(), MapView.Listener {
             stats.text = when (Session.spec3D.type) {
                 MissionType.ORBIT -> tr("Órbita: toca alrededor del objeto (estatua, torre, edificio) para marcar su planta (mínimo 3 puntos).")
                 MissionType.FACADE -> tr("Fachada: toca un extremo de la pared, luego el otro, y por último un punto en el lado desde el que volará el dron.")
+                MissionType.THERMAL_SCAN -> tr("Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).")
                 else -> tr("Doble cuadrícula: toca las esquinas de la zona o manzana (mínimo 3).")
             }
             map.passes = emptyList(); return

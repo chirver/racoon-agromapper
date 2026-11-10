@@ -59,3 +59,6 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 ## 0.14.4
 - Quitado el modo búsqueda (la ANAFI no aplica la paleta spot al vídeo); la paleta absoluta hace de búsqueda.
 - Ajustes rápidos: Persona, Placas solares, Rescoldos.
+
+## 0.15
+- Nueva misión «Inspección térmica (barrido rápido)»: pasadas separadas por la franja de la térmica, cámara abajo, sin fotos programadas; el detector inspecciona y, si se activa, para a fotografiar cada punto caliente. Pensada para plantas solares.

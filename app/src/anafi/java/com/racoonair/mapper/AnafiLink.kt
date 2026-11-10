@@ -465,7 +465,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             calibrateThermal("inicio de misión")
         } catch (t: Throwable) { log("Calibración térmica: ${t.message}") }
         applyThermalView()
-        if (pr.missionLock) log("Térmica: paleta fija ${pr.missionMin.toInt()}–${pr.missionMax.toInt()} °C durante la misión (mosaico).")
+        if (pr.missionLock && planHasPhotos()) log("Térmica: paleta fija ${pr.missionMin.toInt()}–${pr.missionMax.toInt()} °C durante la misión (mosaico).")
     }
 
     private fun onMissionThermalEnd() {
@@ -478,6 +478,9 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         } catch (_: Throwable) {}
         applyThermalView()
     }
+
+    /** Paleta fija solo en vuelos con fotos (mosaico); en un barrido de inspección se mantiene la de detección. */
+    private fun planHasPhotos() = planItems.any { it.command == FlightPlan.CMD_IMAGE_START }
 
     private fun calibrateThermal(why: String) {
         try { if (thermal?.calibration()?.calibrate() == true) log("Térmica calibrada ($why).") } catch (_: Throwable) {}
@@ -527,7 +530,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             else log("Térmica: el dron no ofrece el modo $want (disponibles $avail)")
             val pr = Session.thermal
             // En misión con paleta fija: rango de la misión (todas las fotos con los mismos colores).
-            val pal: ThermalControl.Palette = if (thermalMission && pr.missionLock) AbsPalette(pr.missionMin, pr.missionMax)
+            val pal: ThermalControl.Palette = if (thermalMission && pr.missionLock && planHasPhotos()) AbsPalette(pr.missionMin, pr.missionMax)
                 else when (pr.mode) {
                     ThermalPaletteMode.ABSOLUTE -> AbsPalette(pr.min, pr.max)
                     ThermalPaletteMode.SEARCH -> AbsPalette(pr.min, pr.max) // la paleta spot no se aplica al vídeo

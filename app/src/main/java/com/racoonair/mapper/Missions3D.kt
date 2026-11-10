@@ -16,7 +16,9 @@ enum class MissionType(val label: String) {
     GRID(tr("Cuadrícula (mapa 2D)")),
     OBLIQUE(tr("Doble cuadrícula oblicua (3D)")),
     ORBIT(tr("Órbita alrededor de un objeto (3D)")),
-    FACADE(tr("Fachada (rejilla vertical)"));
+    FACADE(tr("Fachada (rejilla vertical)")),
+    /** Barrido rápido con la térmica, sin fotogrametría: el detector de puntos calientes hace el trabajo. */
+    THERMAL_SCAN(tr("Inspección térmica (barrido rápido)"));
     val is3D get() = this != GRID
 }
 
@@ -102,7 +104,7 @@ class Plan3D(
         var capturing = false; var prevP = home; var prevA = safeAlt
         for (w in wps) {
             val h = GridPlanner.distance(prevP, w.p); val v = abs(w.alt - prevA)
-            val t = h / (if (capturing) captureSpeed else TRANSIT) + v / CLIMB
+            val t = h / (if (capturing || spec.type == MissionType.THERMAL_SCAN) captureSpeed else TRANSIT) + v / CLIMB
             if (capturing) capture += t else other += t
             if (w.startCapture) capturing = true
             if (w.stopCapture) capturing = false
@@ -114,7 +116,9 @@ class Plan3D(
         return capture + other
     }
 
-    override fun summary(): String = info + String.format(Locale.ROOT,
+    override fun summary(): String = info + if (spec.type == MissionType.THERMAL_SCAN)
+        String.format(Locale.ROOT, tr("\nSin fotos programadas · ruta %.0f m · tiempo estimado %.1f min"), pathLength, estimatedSeconds / 60)
+    else String.format(Locale.ROOT,
         tr("\nFoto cada %.1f m · ~%d fotos · vel. %.1f m/s · ruta %.0f m · tiempo estimado %.1f min"),
         triggerDistance, photos, captureSpeed, pathLength, estimatedSeconds / 60)
 
@@ -125,7 +129,7 @@ class Plan3D(
         if (wps.any { it.alt - ground < 2.0 }) b.add(tr("Algún punto queda a menos de 2 m del suelo."))
         if (wps.any { it.alt < 1.0 }) b.add(tr("Parte de la misión queda por debajo del punto de despegue: despega a la altura de la base del objeto o más abajo."))
         if (estimatedSeconds > ANAFI_USABLE_MIN * 60) b.add(trf("Vuelo estimado de %1\$s min: no cabe en una batería de ANAFI. Reduce anillos o zona.", "%.0f".format(estimatedSeconds / 60)))
-        if (captureSpeed * params.camera.minIntervalS * 1.05 > triggerDistance) b.add(tr("La cámara no da abasto a esa velocidad: baja la velocidad o el solape."))
+        if (spec.type != MissionType.THERMAL_SCAN && captureSpeed * params.camera.minIntervalS * 1.05 > triggerDistance) b.add(tr("La cámara no da abasto a esa velocidad: baja la velocidad o el solape."))
         return b
     }
 
@@ -160,6 +164,8 @@ class Plan3D(
         item(FlightPlan.CMD_CHANGE_SPEED, p2 = TRANSIT)
         // Llegar por arriba (altura segura) a la vertical del primer punto y bajar.
         item(FlightPlan.CMD_WAYPOINT, p2 = 2.0, p4 = first.yaw, lat = first.p.lat, lon = first.p.lon, alt = safeAlt)
+        // Barrido térmico: todo el recorrido a la velocidad de inspección (no hay fotos programadas).
+        if (spec.type == MissionType.THERMAL_SCAN) item(FlightPlan.CMD_CHANGE_SPEED, p2 = captureSpeed)
         var tilt = first.tilt
         var capturing = false
         for (w in wps) {
@@ -203,6 +209,7 @@ object Planner3D {
             MissionType.ORBIT -> orbit(zone, home, p, s)
             MissionType.OBLIQUE -> oblique(zone, home, p, s)
             MissionType.FACADE -> facade(zone, home, p, s)
+            MissionType.THERMAL_SCAN -> thermalScan(zone, home, p, s)
             MissionType.GRID -> throw IllegalArgumentException("GRID")
         }
     }
@@ -270,6 +277,40 @@ object Planner3D {
      * mira en el sentido de avance, así las pasadas de ida y vuelta ven las dos caras). La zona se amplía para
      * que las fachadas del borde también salgan.
      */
+    /** FOV de la térmica de la ANAFI Thermal (grados). */
+    const val THERMAL_HFOV = 50.0
+    const val THERMAL_VFOV = 38.0
+
+    /**
+     * Inspección térmica: pasadas separadas por lo que ve la TÉRMICA (no la RGB) con un 15 % de margen,
+     * cámara abajo y sin fotos programadas. Mucho más rápido que un vuelo de fotogrametría.
+     */
+    fun thermalScan(zone: List<LatLon>, home: LatLon, p: GridParams, s: Spec3D): Plan3D {
+        require(zone.size >= 3) { tr("Dibuja la zona (mínimo 3 puntos)") }
+        val alt = p.altitude
+        val thermalW = 2 * alt * tan(Math.toRadians(THERMAL_HFOV / 2))
+        val spacing = thermalW * 0.85
+        // GridPlanner separa las pasadas según la RGB: elegimos el solape lateral que da esa separación.
+        val rgbW = p.camera.footprint(alt).first
+        val side = (1 - spacing / rgbW).coerceIn(0.3, 0.95)
+        val g = GridPlanner.plan(zone, home, p.copy(sideOverlap = side, overshoot = max(p.overshoot, 5.0)))
+        val wps = ArrayList<Wp3D>()
+        for ((a, b) in g.passes) {
+            val yaw = GridPlanner.bearing(a, b)
+            wps.add(Wp3D(a, alt, yaw, -90.0)); wps.add(Wp3D(b, alt, yaw, -90.0))
+        }
+        val speed = p.speed.coerceIn(1.0, 12.0)
+        val px = thermalW / 160.0
+        val bl = ArrayList<String>(); val w = ArrayList<String>()
+        if (alt < 10) bl.add(tr("Inspección térmica: vuela a 10 m o más."))
+        if (speed > 10) w.add(tr("Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños."))
+        if (px > 0.25) w.add(trf("A esta altura cada píxel térmico mide %1\$s cm: una célula solar defectuosa (~15 cm) puede no verse. Para placas, 30–40 m.", "%.0f".format(px * 100)))
+        w.add(tr("Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona."))
+        val info = String.format(Locale.ROOT, tr("INSPECCIÓN TÉRMICA · %d pasadas cada %.0f m · franja térmica %.0f m · píxel %.0f cm · %.1f m/s"),
+            g.passes.size, spacing, thermalW, px * 100, speed)
+        return Plan3D(home, p, s, wps, null, 0.0, alt, 0.0, speed, 0, info, bl, w)
+    }
+
     fun oblique(zone: List<LatLon>, home: LatLon, p: GridParams, s: Spec3D): Plan3D {
         require(zone.size >= 3) { tr("Dibuja la zona (mínimo 3 puntos)") }
         val tilt = s.obliqueTilt.coerceIn(-85.0, -30.0)

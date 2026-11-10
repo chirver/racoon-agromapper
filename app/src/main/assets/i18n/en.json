@@ -888,5 +888,14 @@
  "Ajustes rápidos": "Quick presets",
  "Persona": "Person",
  "Placas solares": "Solar panels",
- "Rescoldos": "Embers"
+ "Rescoldos": "Embers",
+ "\nSin fotos programadas · ruta %.0f m · tiempo estimado %.1f min": "\nNo scheduled photos · route %.0f m · estimated time %.1f min",
+ "A esta altura cada píxel térmico mide %1$s cm: una célula solar defectuosa (~15 cm) puede no verse. Para placas, 30–40 m.": "At this altitude each thermal pixel is %1$s cm: a faulty solar cell (~15 cm) may not show. For panels, 30–40 m.",
+ "Barrido rápido con la cámara térmica mirando abajo, sin fotogrametría. Las pasadas se separan según lo que ve la térmica. Altura y velocidad: campos «Altura» y «Velocidad» (placas solares: 30–40 m y 6–8 m/s). Con «parar, hacer foto y seguir» en 🎚, el dron se detiene a fotografiar cada punto caliente.": "Fast sweep with the thermal camera looking down, no photogrammetry. Passes are spaced by what the thermal camera sees. Altitude and speed: \"Altitude\" and \"Speed\" fields (solar panels: 30–40 m and 6–8 m/s). With \"stop, take a photo and continue\" in 🎚, the drone stops to photograph each hot spot.",
+ "INSPECCIÓN TÉRMICA · %d pasadas cada %.0f m · franja térmica %.0f m · píxel %.0f cm · %.1f m/s": "THERMAL INSPECTION · %d passes every %.0f m · thermal swath %.0f m · pixel %.0f cm · %.1f m/s",
+ "Inspección térmica (barrido rápido)": "Thermal inspection (fast sweep)",
+ "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Thermal inspection: tap the corners of the solar plant or area to sweep (at least 3).",
+ "Inspección térmica: vuela a 10 m o más.": "Thermal inspection: fly at 10 m or higher.",
+ "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Over 10 m/s: the thermal image blurs and the detector may miss small spots.",
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Set the video to thermal with the absolute palette and alerts on before take-off: the detector does the inspecting."
 }
