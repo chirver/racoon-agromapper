@@ -900,5 +900,8 @@
  "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Metti il video in termica con la tavolozza assoluta e l'avviso attivo prima del decollo: è il rilevatore che ispeziona.",
  "· Estado de la captura: %1$s · GPS: %2$s": "· Stato della cattura: %1$s · GPS: %2$s",
  "→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.": "→ Potrebbe non accettare «per distanza» senza fix GPS: portala all'aperto, attendi il fix e reinvia.",
- "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Scollega la Sequoia per 10 s e reinvia il piano."
+ "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Scollega la Sequoia per 10 s e reinvia il piano.",
+ "\nRUMBO %1$s": "\nPRUA %1$s",
+ "  ·  TOMA %1$s m al %2$s°": "  ·  ATTERRAGGIO %1$s m a %2$s°",
+ "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia non ha ancora cambiato modalità: nuovo tentativo…"
 }

@@ -13,3 +13,6 @@
 
 ## Bluegrass/Disco 0.13.1
 - Sequoia: cambiar de «por tiempo» a «por distancia» más robusto (espera a que termine de parar, modo y parámetro en la misma petición, reintentos con la configuración completa) y explica la causa si aun así lo rechaza.
+
+## ANAFI 0.16.2 · Bluegrass/Disco 0.13.2
+- Vídeo a pantalla completa (botón ⛶): telemetría y avisos encima; rumbo y, en la Disco, distancia y rumbo al punto de toma. Para aterrizar a mano en FPV y para búsqueda/inspección. Atrás o ✕ para salir.

@@ -301,7 +301,16 @@ class MainActivity : Activity(), DroneLink.Listener {
         osd.text = buildString {
             append(trf("ALT %1\$s  VEL %2\$s  BAT %3\$s", fmt(t.altitude, 0, "m"), fmt(t.speed, 1, "m/s"), if (t.battery < 0) "—" else "${t.battery}%"))
             append(trf("\nCASA %1\$s  ·  GPS %2\$s  ·  %3\$s", dist, if (t.gpsFix) "FIX ${t.satellites}" else "SIN FIX", t.flyingState))
+            if (fullscreen) {
+                // Para aterrizar a mano (Disco FPV): rumbo y, si hay toma planificada, distancia y rumbo hasta ella.
+                val hdg = if (t.yawDeg.isNaN()) "—" else "%03.0f°".format((t.yawDeg + 360) % 360)
+                append(trf("\nRUMBO %1\$s", hdg))
+                val land = Session.fixedWing.landing
+                if (t.droneModel == 2 && land != null && d != null)
+                    append(trf("  ·  TOMA %1\$s m al %2\$s°", "%.0f".format(GridPlanner.distance(d, land)), "%03.0f".format(GridPlanner.bearing(d, land))))
+            }
         }
+        refreshFullscreenAlerts()
         val fresh = link.streamAlive() ?: (System.currentTimeMillis() - videoView.lastFrameAt < 2000)
         if (::thermalTab.isInitialized) {
             val vis = if (link.hasThermal) View.VISIBLE else View.GONE
@@ -598,6 +607,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         else if (Session.autoRth == 2 && t.navigateHome == "en curso") alerts.add(0, tr("⛔ VOLVIENDO A CASA por batería"))
 
         alertBanner.visibility = if (alerts.isEmpty()) View.GONE else View.VISIBLE
+        if (alerts.isEmpty()) refreshFullscreenAlerts()
         if (alerts.isNotEmpty()) {
             alertBanner.text = alerts.joinToString("\n")
             val critical = alerts.any { it.startsWith("⛔") }
@@ -918,7 +928,8 @@ class MainActivity : Activity(), DroneLink.Listener {
             updateThermalOverlay()
         }.apply { visibility = View.GONE }
         thermalCfgTab = button("🎚", C_GREY) { thermalDialog() }.apply { visibility = View.GONE }
-        tabsRow = row(mapTab, videoTab, thermalTab, thermalCfgTab)
+        val fsTab = button("⛶", C_GREY) { setFullscreen(true) }
+        tabsRow = row(mapTab, videoTab, thermalTab, thermalCfgTab, fsTab)
         mc.addView(tabsRow)
         viewHolder = FrameLayout(this)
         flightMap = MapView(this)
@@ -993,7 +1004,93 @@ class MainActivity : Activity(), DroneLink.Listener {
         scrollRoot = root
         mainFrame = LinearLayout(this).apply { setBackgroundColor(C_BG) }
         arrange(resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
-        return mainFrame
+        // Capa de pantalla completa (vídeo + telemetría + avisos), encima de todo.
+        fsHolder = FrameLayout(this).apply { setBackgroundColor(Color.BLACK); visibility = View.GONE }
+        fsAlert = TextView(this).apply {
+            setTextColor(Color.WHITE); textSize = 15f; setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER
+            setPadding(dp(10), dp(6), dp(10), dp(6)); visibility = View.GONE
+        }
+        val fsBtns = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun fsBtn(t: String, onClick: () -> Unit) = Button(this).apply {
+            text = t; textSize = 15f; setTextColor(Color.WHITE); isAllCaps = false
+            background = GradientDrawable().apply { setColor(0x88000000.toInt()); cornerRadius = dp(8).toFloat() }
+            setPadding(dp(10), 0, dp(10), 0); setOnClickListener { onClick() }
+        }
+        fsThermal = fsBtn("🌡") { link.setThermalView(!link.thermalView); fsThermal.text = if (link.thermalView) "🌡" else "📷"; thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB"); updateThermalOverlay() }
+        fsBtns.addView(fsThermal, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
+        fsBtns.addView(fsBtn("✕") { setFullscreen(false) }, LinearLayout.LayoutParams(dp(52), dp(44)))
+        fsOverlay = FrameLayout(this)
+        fsOverlay.addView(fsAlert, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        fsOverlay.addView(fsBtns, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply { topMargin = dp(70); rightMargin = dp(8) })
+        return FrameLayout(this).apply {
+            addView(mainFrame, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(fsHolder, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    // ---------------------------------------------------------------- pantalla completa (FPV, búsqueda, inspección)
+
+    private lateinit var fsHolder: FrameLayout
+    private lateinit var fsOverlay: FrameLayout
+    private lateinit var fsAlert: TextView
+    private lateinit var fsThermal: Button
+    private var fullscreen = false
+
+    /** Vídeo a toda pantalla con la telemetría y los avisos encima. Para aterrizar a mano la Disco (FPV) y para buscar. */
+    private fun setFullscreen(on: Boolean) {
+        if (on == fullscreen) return
+        if (on && !link.supportsVideo) return
+        fullscreen = on
+        if (on) {
+            setViewMode(video = true)
+            detach(viewHolder)
+            fsHolder.addView(viewHolder, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            fsHolder.addView(fsOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            fsHolder.visibility = View.VISIBLE
+            fsThermal.visibility = if (link.hasThermal) View.VISIBLE else View.GONE
+            fsThermal.text = if (link.thermalView) "🌡" else "📷"
+            osd.textSize = 17f
+            setSystemBars(hidden = true)
+        } else {
+            fsHolder.removeAllViews()
+            fsHolder.visibility = View.GONE
+            mapCard.addView(viewHolder, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330)).apply { topMargin = dp(6) })
+            osd.textSize = 13f
+            setSystemBars(hidden = false)
+            arrange(resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+        }
+        refreshFullscreenAlerts()
+        updateOsd(link.telemetry)
+    }
+
+    private fun setSystemBars(hidden: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            window.insetsController?.let { c ->
+                if (hidden) {
+                    c.hide(android.view.WindowInsets.Type.systemBars())
+                    c.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                } else c.show(android.view.WindowInsets.Type.systemBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = if (hidden)
+                (View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+            else View.SYSTEM_UI_FLAG_VISIBLE
+        }
+    }
+
+    /** Los avisos (batería, enlace, vuelta a casa, viento…) se repiten abajo en pantalla completa. */
+    private fun refreshFullscreenAlerts() {
+        if (!::fsAlert.isInitialized) return
+        val show = fullscreen && alertBanner.visibility == View.VISIBLE
+        fsAlert.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) { fsAlert.text = alertBanner.text; fsAlert.background = alertBanner.background?.constantState?.newDrawable() }
+    }
+
+    @Deprecated("Back gesture")
+    override fun onBackPressed() {
+        if (fullscreen) { setFullscreen(false); return }
+        @Suppress("DEPRECATION") super.onBackPressed()
     }
 
     private fun setEnabled(b: Button, enabled: Boolean) {

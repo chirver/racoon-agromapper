@@ -900,5 +900,8 @@
  "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Set the video to thermal with the absolute palette and alerts on before take-off: the detector does the inspecting.",
  "· Estado de la captura: %1$s · GPS: %2$s": "· Capture state: %1$s · GPS: %2$s",
  "→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.": "→ It may not accept \"by distance\" without a GPS fix: take it outdoors, wait for the fix and send again.",
- "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Unplug the Sequoia for 10 s and send the plan again."
+ "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Unplug the Sequoia for 10 s and send the plan again.",
+ "\nRUMBO %1$s": "\nHDG %1$s",
+ "  ·  TOMA %1$s m al %2$s°": "  ·  LANDING %1$s m at %2$s°",
+ "· La Sequoia aún no cambia de modo: reintentando…": "· The Sequoia has not changed mode yet: retrying…"
 }
