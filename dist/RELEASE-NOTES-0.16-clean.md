@@ -7,3 +7,6 @@
   (com.parrot.* plus jmdns, Sanselan and LocalBroadcastManager, all Apache-2.0). Unused leftovers removed.
 - Native libraries are unchanged (see NOTICE.md for where they come from).
 - ⚠️ Not flown yet with these builds: test on the ground (connect, video, upload a plan) before flying.
+
+## ANAFI 0.16.1
+- Fix: NoSuchMethodError LambdaMetafactory al conectar. El dex se genera con D8, que traduce las lambdas de Java 8 de GroundSDK (dx no lo hacía).

@@ -6,6 +6,8 @@
 #   KOTLINC     -> kotlinc/bin/kotlinc (Kotlin 2.0.x)
 #   ANDROID_JAR -> android.jar de API 31
 #   DX_JAR      -> dx-30.x.jar (viene dentro de dex2jar/dex-tools)
+#   D8_JAR      -> jar con com.android.tools.r8.D8 (r8.jar de build-tools, o el jadx-*-all.jar que lo incluye).
+#                  Obligatorio en anafi; si está definido se usa también en parrot.
 #   STDLIB_JAR  -> kotlin-stdlib.jar
 #   AAPT2       -> aapt2 (p. ej. el que trae apktool en prebuilt/linux/aapt2_64)
 # Usa build-local/arsdk-3.14.dex (ARSDK3). En anafi compila GroundSDK 1.8.0 desde el código oficial de Parrot
@@ -71,11 +73,18 @@ mkdir -p "$OUT/std" && (cd "$OUT/std" && unzip -qo "$STDLIB_JAR" -x 'META-INF/*'
 echo "[3/6] .class → classes.dex (dx)"
 DX_IN=("$OUT/app.jar" "$OUT/stdlib.jar")
 [ "$FLAVOR" = anafi ] && DX_IN+=("$HERE/groundsdk-deps.jar")
-java -Xmx3g -cp "$DX_JAR" com.android.dx.command.Main --dex --min-sdk-version=26 --multi-dex \
-  --output="$OUT/dex" "${DX_IN[@]}"
+if [ -n "${D8_JAR:-}" ]; then
+  # D8 traduce las lambdas de Java 8 (GroundSDK las usa); dx no, y Android no tiene LambdaMetafactory.
+  java -Xmx3g -cp "$D8_JAR" com.android.tools.r8.D8 --release --min-api 26 --lib "$ANDROID_JAR" \
+    --output "$OUT/dex" "${DX_IN[@]}"
+else
+  [ "$FLAVOR" = anafi ] && { echo "ERROR: la app ANAFI necesita D8 (variable D8_JAR): dx no traduce las lambdas de GroundSDK"; exit 1; }
+  java -Xmx3g -cp "$DX_JAR" com.android.dx.command.Main --dex --min-sdk-version=26 --multi-dex \
+    --output="$OUT/dex" "${DX_IN[@]}"
+fi
 DEXES=()
 n=0
-for f in $(ls "$OUT/dex" | sort -V); do n=$((n+1)); d=$( [ $n = 1 ] && echo classes.dex || echo classes$n.dex ); cp "$OUT/dex/$f" "$OUT/apk/$d"; DEXES+=("$d"); done
+for f in $(ls "$OUT/dex" | grep '\.dex$' | sort -V); do n=$((n+1)); d=$( [ $n = 1 ] && echo classes.dex || echo classes$n.dex ); cp "$OUT/dex/$f" "$OUT/apk/$d"; DEXES+=("$d"); done
 n=$((n+1)); cp "$HERE/arsdk-3.14.dex" "$OUT/apk/classes$n.dex"; DEXES+=("classes$n.dex")
 
 echo "[5/6] dex + librerías nativas"
