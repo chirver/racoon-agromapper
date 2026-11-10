@@ -43,8 +43,8 @@ interface Link {
     /** La pantalla que tenía el visor se cierra. */
     fun releaseStreamView() {}
     /** Modo gafas con el visor del SDK (GroundSDK). null = el enlace no lo tiene (se usa GogglesView). */
-    fun createHmdView(ctx: android.content.Context, overlay: android.view.View, onError: (String) -> Unit = {}): android.view.View? = null
-    fun releaseHmdView() {}
+    /** Modo gafas (pantalla partida con corrección de lente) disponible con este dron. */
+    val supportsGoggles: Boolean get() = true
     /** ¿Está llegando vídeo al visor propio? null si el enlace no tiene visor propio. */
     fun streamAlive(): Boolean? = null
     /** ANAFI Thermal: ver la cámara térmica (true) o la RGB (false) en el vídeo. */

@@ -312,22 +312,8 @@ abstract class Renderer extends GlView.Renderer {
      */
     abstract void onCameraGeometryChanged(float horizontalFov, float verticalFov, int width, int height);
 
-    /** Racoon patch: a failure in the GL thread is reported instead of killing the app. */
-    private volatile boolean mFailed;
-
-    private void fail(@NonNull Throwable t) {
-        if (mFailed) return;
-        mFailed = true;
-        java.util.function.Consumer<Throwable> l = GsdkHmdView.sErrorListener;
-        if (l != null) runOnMainThread(() -> l.accept(t));
-    }
-
     @Override
     public final void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        try { doSurfaceCreated(); } catch (Throwable t) { fail(t); }
-    }
-
-    private void doSurfaceCreated() {
         Resources resources = mContext.getResources();
 
         mOverlay = new Overlay(resources) {
@@ -362,10 +348,6 @@ abstract class Renderer extends GlView.Renderer {
 
     @Override
     public final void onSurfaceChanged(GL10 gl, int width, int height) {
-        try { doSurfaceChanged(width, height); } catch (Throwable t) { fail(t); }
-    }
-
-    private void doSurfaceChanged(int width, int height) {
         mGeometryComputer.setSurfaceDimensions(width, height);
         mComputeGeometry = true;
         computeGeometry();
@@ -373,11 +355,6 @@ abstract class Renderer extends GlView.Renderer {
 
     @Override
     public final void onDrawFrame(GL10 gl) {
-        if (mFailed) return;
-        try { doDrawFrame(); } catch (Throwable t) { fail(t); }
-    }
-
-    private void doDrawFrame() {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
         // prepare screen

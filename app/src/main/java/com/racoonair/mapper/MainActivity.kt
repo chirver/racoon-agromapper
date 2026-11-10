@@ -1043,7 +1043,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
         fsThermal = fsBtn("🌡") { link.setThermalView(!link.thermalView); fsThermal.text = if (link.thermalView) "🌡" else "📷"; thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB"); updateThermalOverlay() }
         fsBtns.addView(fsThermal, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
-        fsBtns.addView(fsBtn("👓") { setGoggles(true) }, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
+        if (link.supportsGoggles) fsBtns.addView(fsBtn("👓") { setGoggles(true) }, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
         fsBtns.addView(fsBtn("✕") { setFullscreen(false) }, LinearLayout.LayoutParams(dp(52), dp(44)))
         fsOverlay = FrameLayout(this)
         fsOverlay.addView(fsAlert, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
@@ -1094,7 +1094,6 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     private var goggles: View? = null
     private var gogglesGl: GogglesView? = null
-    private var hmdOsd: TextView? = null
 
     /**
      * Pantalla partida con corrección de lente para meter el móvil en las gafas. Se sale tocando la pantalla
@@ -1102,21 +1101,10 @@ class MainActivity : Activity(), DroneLink.Listener {
      */
     private fun setGoggles(on: Boolean) {
         if (on == (goggles != null)) return
+        if (on && !link.supportsGoggles) return
         if (on) {
             if (!fullscreen) setFullscreen(true)
-            val osdView = TextView(this).apply {
-                setTextColor(Color.WHITE); textSize = 9f; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                gravity = Gravity.CENTER; setShadowLayer(3f, 0f, 0f, Color.BLACK); setBackgroundColor(0x66000000)
-            }
-            // ANAFI: visor de gafas de GroundSDK (Parrot). Bluegrass/Disco: el nuestro, con el mismo perfil de lentes.
-            val v = link.createHmdView(this, FrameLayout(this).apply {
-                addView(osdView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply { topMargin = dp(18) })
-            }, onError = { msg ->
-                // El visor de Parrot ha fallado: se sale de las gafas sin cerrar la app y se deja la traza en el registro.
-                setGoggles(false)
-                AlertDialog.Builder(this).setTitle(tr("Las gafas han fallado")).setMessage(trf("El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1\$s", msg))
-                    .setPositiveButton(android.R.string.ok, null).show()
-            })?.also { hmdOsd = osdView } ?: GogglesView(this) { surf -> videoView.setExternalSurface(surf) }.also { gogglesGl = it }
+            val v = GogglesView(this) { surf -> videoView.setExternalSurface(surf) }.also { gogglesGl = it }
             v.setOnClickListener { setGoggles(false) }
             fsHolder.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             goggles = v
@@ -1127,8 +1115,8 @@ class MainActivity : Activity(), DroneLink.Listener {
             updateOsd(link.telemetry)
         } else {
             goggles?.let { fsHolder.removeView(it) }
-            if (gogglesGl != null) videoView.setExternalSurface(null) else link.releaseHmdView()
-            goggles = null; gogglesGl = null; hmdOsd = null
+            videoView.setExternalSurface(null)
+            goggles = null; gogglesGl = null
             fsOverlay.visibility = View.VISIBLE
             window.attributes = window.attributes.apply { screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE }
         }
@@ -1145,7 +1133,6 @@ class MainActivity : Activity(), DroneLink.Listener {
         val l2 = (if (t.gpsFix) "GPS ${t.satellites}" else tr("SIN GPS")) + "  " + linkText(t) + "  " + trf("RUMBO %1\$s", hdg)
         val homeLabel = if (homeDist.isNaN()) tr("CASA —") else trf("CASA %1\$s", "%.0f m".format(homeDist))
         gogglesGl?.setOverlay("$l1\n$l2", alert, color, homeRel.toFloat(), homeLabel, linkLevel(t))
-        hmdOsd?.text = "$l1\n$l2\n" + homeLabel + (if (homeRel.isNaN()) "" else " " + ARROWS[(((homeRel + 22.5) % 360) / 45).toInt()]) + (alert?.let { "\n" + it } ?: "")
     }
 
     private fun setSystemBars(hidden: Boolean) {

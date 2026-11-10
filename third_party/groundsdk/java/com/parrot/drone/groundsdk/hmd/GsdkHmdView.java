@@ -68,10 +68,6 @@ import com.parrot.drone.groundsdk.stream.Stream;
  */
 public final class GsdkHmdView extends FrameLayout {
 
-    /** Racoon patch: receives, on the main thread, any failure of the HMD renderer (instead of a crash). */
-    @Nullable
-    public static volatile java.util.function.Consumer<Throwable> sErrorListener;
-
     /** Layout containing offscreen custom UI overlay. */
     @NonNull
     private final FrameLayout mOverlayView;
@@ -193,18 +189,14 @@ public final class GsdkHmdView extends FrameLayout {
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
-                if (mRenderer == null) return;
-                try { mRenderer.withOverlayCanvas(glCanvas -> {
+                mRenderer.withOverlayCanvas(glCanvas -> {
                     // scaling will only happen when texture size change on the GL thread races with
                     // onOverlaySizeChanged callback on the UI thread
                     glCanvas.scale(glCanvas.getWidth() / (float) canvas.getWidth(),
                             glCanvas.getHeight() / (float) canvas.getHeight());
                     glCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                     super.dispatchDraw(glCanvas);
-                }); } catch (Throwable t) {
-                    java.util.function.Consumer<Throwable> l = sErrorListener;
-                    if (l != null) l.accept(t);
-                }
+                });
             }
         };
 

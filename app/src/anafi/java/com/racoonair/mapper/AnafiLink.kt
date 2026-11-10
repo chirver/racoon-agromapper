@@ -31,7 +31,6 @@ import com.parrot.drone.groundsdk.device.peripheral.StreamServer
 import com.parrot.drone.groundsdk.device.peripheral.Gimbal
 import com.parrot.drone.groundsdk.device.peripheral.stream.CameraLive
 import com.parrot.drone.groundsdk.stream.GsdkStreamView
-import com.parrot.drone.groundsdk.hmd.GsdkHmdView
 import java.io.File
 
 /**
@@ -438,31 +437,8 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         bindStream()
         return v
     }
-    private var hmdView: GsdkHmdView? = null
-
-    override fun createHmdView(ctx: Context, overlay: android.view.View, onError: (String) -> Unit): android.view.View? = try {
-        releaseHmdView()
-        // Un fallo del visor de gafas se informa (con su traza) en vez de cerrar la app.
-        GsdkHmdView.sErrorListener = java.util.function.Consumer { t ->
-            val where = t.stackTrace.take(4).joinToString(" ← ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
-            val msg = "${t.javaClass.simpleName}: ${t.message} @ $where"
-            log("Gafas: fallo del visor — $msg")
-            onError(msg)
-        }
-        GsdkHmdView(ctx).apply {
-            // Paquete de lentes oficial de Parrot (app de ejemplo de GroundSDK); Cockpitglasses 1 y 2 usan el mismo perfil.
-            setHmdModel(ctx.resources.getIdentifier("hmd_models", "raw", ctx.packageName), "cockpitGlasses2")
-            setOverlay(overlay)
-            hmdView = this
-            bindStream()
-        }
-    } catch (t: Throwable) { log("Gafas: ${t.javaClass.simpleName}: ${t.message}"); null }
-
-    override fun releaseHmdView() {
-        try { hmdView?.setStream(null) } catch (_: Throwable) {}
-        hmdView = null
-        bindStream()
-    }
+    // Sin modo gafas en la ANAFI: el visor de GroundSDK cierra la app y no aporta frente a la pantalla completa.
+    override val supportsGoggles = false
 
     override fun releaseStreamView() {
         try { streamView?.setStream(null) } catch (_: Throwable) {}
@@ -472,14 +448,6 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     override fun streamAlive(): Boolean = live?.playState() == CameraLive.PlayState.PLAYING && videoOn
 
     private fun bindStream() {
-        // Con las gafas puestas, el stream va al visor de gafas y no a la vista normal.
-        hmdView?.let { h ->
-            try { streamView?.setStream(null) } catch (_: Throwable) {}
-            val l = live
-            try { if (videoOn && l != null) { h.setStream(l); if (l.playState() != CameraLive.PlayState.PLAYING) l.play() } else h.setStream(null) }
-            catch (t: Throwable) { log("Gafas: ${t.javaClass.simpleName}: ${t.message}") }
-            return
-        }
         val v = streamView ?: return
         val l = live
         try {

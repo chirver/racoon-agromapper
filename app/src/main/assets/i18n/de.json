@@ -909,7 +909,5 @@
  "SIN GPS": "KEIN GPS",
  "CASA —": "HOME —",
  "CASA %1$s": "HOME %1$s",
- "Las gafas han fallado": "Brillenansicht fehlgeschlagen",
- "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "Die Brillenansicht der ANAFI hatte einen Fehler und wurde geschlossen. Bitte die Diagnose senden.\n\n%1$s",
  "RUMBO %1$s": "KURS %1$s"
 }

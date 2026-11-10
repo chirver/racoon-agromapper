@@ -909,7 +909,5 @@
  "SIN GPS": "NO GPS",
  "CASA —": "CASA —",
  "CASA %1$s": "CASA %1$s",
- "Las gafas han fallado": "La vista occhiali non ha funzionato",
- "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "La vista occhiali dell'ANAFI ha dato un errore ed è stata chiusa. Invia la Diagnostica per correggerlo.\n\n%1$s",
  "RUMBO %1$s": "ROTTA %1$s"
 }

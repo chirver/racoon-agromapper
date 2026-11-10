@@ -909,7 +909,5 @@
  "SIN GPS": "PAS DE GPS",
  "CASA —": "MAISON —",
  "CASA %1$s": "MAISON %1$s",
- "Las gafas han fallado": "Le mode lunettes a échoué",
- "El visor de gafas de la ANAFI dio un error y se ha cerrado. Mándame el Diagnóstico para corregirlo.\n\n%1$s": "Le mode lunettes de l'ANAFI a rencontré une erreur et a été fermé. Envoyez le Diagnostic pour le corriger.\n\n%1$s",
  "RUMBO %1$s": "CAP %1$s"
 }
