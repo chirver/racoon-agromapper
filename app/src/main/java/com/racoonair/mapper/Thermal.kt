@@ -74,7 +74,9 @@ object ThermalScan {
      * [hx]/[hy]: posición relativa (0..1) del punto más caliente en el fotograma.
      */
     data class Result(val maxC: Double?, val centerC: Double?, val hot: Boolean, val hotPixels: Int, val hx: Float, val hy: Float,
-                      val valid: Int = 0, val medianC: Double? = null)
+                      val valid: Int = 0, val medianC: Double? = null,
+                      /** Diagnóstico: colores más frecuentes del fotograma («#rrggbb ×n»), para ver qué paleta pinta el dron. */
+                      val colors: String = "")
 
     /** Un punto caliente ocupa entre el 0,05 % y el 30 % de la imagen. Más = todo el suelo caliente, no aviso. */
     private const val HOT_MIN_FRAC = 0.0005
@@ -95,6 +97,7 @@ object ThermalScan {
         var minX = 1f; var maxX = 0f; var minY = 1f; var maxY = 0f
         var hotN = 0; var hotSumX = 0f; var hotSumY = 0f
         val span = p.max - p.min
+        val hist = HashMap<Int, Int>()
         for (j in 0 until ROWS) {
             val y = ((j + 0.5) * h / ROWS).toInt()
             bmp.getPixels(px, 0, w, 0, y, w, 1)
@@ -104,6 +107,8 @@ object ThermalScan {
                 if (r + g + b < 12) continue // bandas negras alrededor del vídeo: no son imagen
                 val fx = (i + 0.5f) / COLS; val fy = (j + 0.5f) / ROWS
                 valid++
+                val q = ((r shr 5) shl 6) or ((g shr 5) shl 3) or (b shr 5) // color cuantizado (8 niveles por canal)
+                hist[q] = (hist[q] ?: 0) + 1
                 if (fx < minX) minX = fx; if (fx > maxX) maxX = fx; if (fy < minY) minY = fy; if (fy > maxY) maxY = fy
                 when (p.mode) {
                     ThermalPaletteMode.SEARCH ->
@@ -120,9 +125,12 @@ object ThermalScan {
         // Posición relativa a la imagen real (sin bandas negras), para poder proyectarla al suelo.
         fun nx(x: Float) = if (maxX > minX) ((x - minX) / (maxX - minX)).coerceIn(0f, 1f) else 0.5f
         fun ny(y: Float) = if (maxY > minY) ((y - minY) / (maxY - minY)).coerceIn(0f, 1f) else 0.5f
+        val top = hist.entries.sortedByDescending { it.value }.take(4).joinToString(" ") { (q, c) ->
+            "#%02x%02x%02x×%d".format(((q shr 6) and 7) * 36, ((q shr 3) and 7) * 36, (q and 7) * 36, c)
+        }
         return when (p.mode) {
             ThermalPaletteMode.ABSOLUTE -> {
-                if (k < 50) return Result(null, null, false, 0, 0.5f, 0.5f, valid)
+                if (k < 50) return Result(null, null, false, 0, 0.5f, 0.5f, valid, colors = top)
                 val sorted = tv.copyOf(k).also { it.sort() }
                 // Percentil 99,7 en vez del máximo: un píxel suelto de compresión no dispara nada.
                 val maxC = sorted[min(k - 1, (k * 0.997).toInt())]
@@ -139,11 +147,11 @@ object ThermalScan {
                 }
                 val c = if (center.isEmpty()) null else center.sorted()[center.size / 2]
                 val hot = p.alert && isSpot(hotN, k)
-                Result(maxC, c, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else bx), ny(if (hotN > 0) hotSumY / hotN else by), k, median)
+                Result(maxC, c, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else bx), ny(if (hotN > 0) hotSumY / hotN else by), k, median, top)
             }
             ThermalPaletteMode.SEARCH -> {
                 val hot = p.alert && isSpot(hotN, valid)
-                Result(null, null, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else 0.5f), ny(if (hotN > 0) hotSumY / hotN else 0.5f), valid)
+                Result(null, null, hot, hotN, nx(if (hotN > 0) hotSumX / hotN else 0.5f), ny(if (hotN > 0) hotSumY / hotN else 0.5f), valid, colors = top)
             }
             else -> Result(null, null, false, 0, 0.5f, 0.5f, valid)
         }

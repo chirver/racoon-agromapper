@@ -51,3 +51,7 @@ Separate app for **Parrot ANAFI Thermal / ANAFI 4K** (SkyController 3). Installs
 - Lista de puntos calientes (🔥 en la pantalla de vuelo): ver en el mapa, ir con Google Maps, compartir coordenadas, ver foto; exportar CSV o KML.
 - Los puntos se guardan al momento y sobreviven a cerrar la app.
 - Fotos de los puntos en la galería (Imágenes/RacoonAgroMapper) con la posición del punto en el EXIF.
+
+## 0.14.3
+- Fix: la app se cerraba al desconectar (GroundSDK paraba su motor mientras desconectaba el mando). La sesión se mantiene viva.
+- Diagnóstico térmico: el registro muestra el modo y los colores que pinta el dron.

@@ -43,7 +43,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     override val platform = Platform.ANAFI
     override val modeName = "ANAFI"
     /** "En curso" mientras haya sesión abierta sin dron conectado (p. ej. tras cambiar de batería). */
-    override val connecting get() = gsdk != null && !telemetry.connected
+    override val connecting get() = active && !telemetry.connected
     override var uploading = false
         private set
     override var missionItemEvents = 0
@@ -52,6 +52,9 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
 
     private val main = Handler(Looper.getMainLooper())
     private var gsdk: GroundSdk? = null
+    /** Conexión pedida por el usuario. La sesión de GroundSDK se mantiene viva entre conexiones: cerrarla hace que
+     *  GroundSDK pare su motor mientras aún desconecta el mando (cuelgue de ~3 s y cierre de la app). */
+    private var active = false
     private var autoConnRef: Ref<AutoConnection>? = null
     private var drone: Drone? = null
     private var rc: RemoteControl? = null
@@ -75,14 +78,13 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     // ---------------------------------------------------------------- conexión
 
     override fun connect(choice: ConnectChoice) {
-        if (gsdk != null) { log("Ya hay una conexión abierta o en curso."); return }
+        if (active) { log("Ya hay una conexión abierta o en curso."); return }
         telemetry.connection = "buscando ANAFI / SkyController 3…"
         listener.onTelemetry(telemetry)
         try {
-            Crumbs.write("anafi: GroundSdk.newSession")
-            val g = GroundSdk.newSession(ctx, null)
+            val g = gsdk ?: GroundSdk.newSession(ctx, null).also { Crumbs.write("anafi: GroundSdk.newSession") }
             g.resume() // una sesión nueva nace SUSPENDIDA: sin esto no llega ningún callback (Pix4D hace lo mismo)
-            gsdk = g
+            gsdk = g; active = true
             autoConnRef = g.getFacility(AutoConnection::class.java) { ac ->
                 if (ac == null) return@getFacility
                 if (ac.status != AutoConnection.Status.STARTED) ac.start()
@@ -95,7 +97,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             log("ERROR iniciando GroundSDK: ${t.javaClass.simpleName}: ${t.message}")
             main.post { try { android.widget.Toast.makeText(ctx, "GroundSDK: ${t.javaClass.simpleName}: ${t.message}", android.widget.Toast.LENGTH_LONG).show() } catch (_: Throwable) {} }
             try { gsdk?.close() } catch (_: Throwable) {}
-            gsdk = null
+            gsdk = null; active = false
             telemetry.connection = "desconectado"
             listener.onTelemetry(telemetry)
         }
@@ -104,11 +106,12 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     override fun disconnect() {
         log("Desconectando…")
         try { autoConnRef?.get()?.stop() } catch (_: Throwable) {}
+        try { drone?.disconnect() } catch (_: Throwable) {}
         closeDrone(); closeRc()
         try { autoConnRef?.close() } catch (_: Throwable) {}
         autoConnRef = null
-        try { gsdk?.close() } catch (_: Throwable) {}
-        gsdk = null
+        // La sesión NO se cierra (ver [active]); se reutiliza en la próxima conexión.
+        active = false
         resetTelemetry()
         telemetry.connection = "desconectado"
         listener.onTelemetry(telemetry)

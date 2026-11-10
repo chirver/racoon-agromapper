@@ -390,7 +390,7 @@ class MainActivity : Activity(), DroneLink.Listener {
                             r.valid < 200 -> tr("Térmica: el vídeo no tiene los colores de la paleta (¿el dron no la ha aplicado?).")
                             pr.mode == ThermalPaletteMode.ABSOLUTE && r.maxC == null -> trf("Térmica: colores de la paleta no reconocidos (%1\$s muestras válidas).", r.valid)
                             else -> trf("Térmica: lectura OK · máx %1\$s · caliente %2\$s %% de la imagen.", r.maxC?.let { "%.1f °C".format(it) } ?: "—", "%.1f".format(pct))
-                        })
+                        } + " [" + pr.mode.name + " · " + r.colors + "]")
                         if (fire) onHotspot(r, jpg)
                     }
                 }
