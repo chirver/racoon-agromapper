@@ -103,7 +103,16 @@ object SequoiaCam {
                 line(trf("✔ Sequoia responde (%1\$s)", IP))
             } catch (t: Throwable) { line(trf("✘ La Sequoia no responde: %1\$s", t.message)); return Report(false, l) }
             try {
-                if (get("/capture").optString("capture") == "running") { get("/capture/stop"); line(tr("· Estaba capturando: parada para reconfigurar")); Thread.sleep(800) }
+                if (get("/capture").optString("capture") != "stopped") {
+                    get("/capture/stop"); line(tr("· Estaba capturando: parada para reconfigurar"))
+                    // La parada no es instantánea (vacía a la tarjeta lo que tiene en memoria): mientras tanto
+                    // la Sequoia ignora el cambio de modo. Tras un time-lapse largo puede tardar bastante.
+                    val until = System.currentTimeMillis() + 30_000
+                    while (System.currentTimeMillis() < until) {
+                        Thread.sleep(500)
+                        if (get("/capture").optString("capture") == "stopped") break
+                    }
+                }
             } catch (_: Throwable) {}
             try {
                 val s = get("/storage")
@@ -121,14 +130,36 @@ object SequoiaCam {
             val secs = Math.round(max(1.0, value) * 10) / 10.0
             val wantMode = if (byDistance) "gps_position" else "timelapse"
             try {
-                post(JSONObject().put("capture_mode", wantMode)); Thread.sleep(300)
+                // Cambiar de modo puede tardar (o no tomarse a la primera justo tras parar): reintentar.
+                // Modo y parámetro en la MISMA petición (como hace su web); si no lo toma, reenviar la
+                // configuración completa que tiene la cámara con esos dos campos cambiados.
+                fun modeBody(base: JSONObject) = base.put("capture_mode", wantMode).apply {
+                    if (byDistance) put("gps_param", m.toString()) else put("timelapse_param", secs.toString())
+                }
+                var tries = 0
+                while (true) {
+                    val body = if (tries < 2) modeBody(JSONObject()) else modeBody(try { get("/config") } catch (_: Throwable) { JSONObject() })
+                    post(body); Thread.sleep(700)
+                    if (get("/config").optString("capture_mode") == wantMode || ++tries >= 6) break
+                    // ¿Sigue parándose? Esperar a que termine antes de reintentar.
+                    try { if (get("/capture").optString("capture") != "stopped") { get("/capture/stop"); Thread.sleep(2000) } } catch (_: Throwable) {}
+                    line(tr("· La Sequoia aún no cambia de modo: reintentando…")); Thread.sleep(1500)
+                }
                 if (byDistance) post(JSONObject().put("gps_param", m.toString()))
                 else post(JSONObject().put("timelapse_param", secs.toString()))
                 Thread.sleep(300)
                 post(JSONObject().put("sensors_mask", 31)); Thread.sleep(300)
                 val cfg = get("/config")
                 val mode = cfg.optString("capture_mode")
-                if (mode != wantMode) { line(trf("✘ No aceptó el modo %1\$s (está en «%2\$s»)", if (byDistance) "GPS" else "time-lapse", mode)); return Report(false, l) }
+                if (mode != wantMode) {
+                    line(trf("✘ No aceptó el modo %1\$s (está en «%2\$s»)", if (byDistance) "GPS" else "time-lapse", mode))
+                    val capt = try { get("/capture").optString("capture") } catch (_: Throwable) { "?" }
+                    val fix = try { get("/gpsfix").optString("fix") } catch (_: Throwable) { "?" }
+                    line(trf("· Estado de la captura: %1\$s · GPS: %2\$s", capt, fix))
+                    line(if (byDistance && fix != "yes") tr("→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.")
+                         else tr("→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan."))
+                    return Report(false, l)
+                }
                 line(if (byDistance) trf("✔ Modo GPS: un disparo cada %1\$s m · 5 cámaras", cfg.optString("gps_param").ifEmpty { m.toString() })
                      else trf("✔ Time-lapse: un disparo cada %1\$s s · 5 cámaras", cfg.optString("timelapse_param").ifEmpty { secs.toString() }))
             } catch (t: Throwable) { line(trf("✘ Error al configurar: %1\$s", t.message)); return Report(false, l) }

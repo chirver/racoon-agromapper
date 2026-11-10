@@ -897,5 +897,8 @@
  "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Thermal inspection: tap the corners of the solar plant or area to sweep (at least 3).",
  "Inspección térmica: vuela a 10 m o más.": "Thermal inspection: fly at 10 m or higher.",
  "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Over 10 m/s: the thermal image blurs and the detector may miss small spots.",
- "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Set the video to thermal with the absolute palette and alerts on before take-off: the detector does the inspecting."
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Set the video to thermal with the absolute palette and alerts on before take-off: the detector does the inspecting.",
+ "· Estado de la captura: %1$s · GPS: %2$s": "· Capture state: %1$s · GPS: %2$s",
+ "→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.": "→ It may not accept \"by distance\" without a GPS fix: take it outdoors, wait for the fix and send again.",
+ "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Unplug the Sequoia for 10 s and send the plan again."
 }

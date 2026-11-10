@@ -10,3 +10,6 @@
 
 ## ANAFI 0.16.1
 - Fix: NoSuchMethodError LambdaMetafactory al conectar. El dex se genera con D8, que traduce las lambdas de Java 8 de GroundSDK (dx no lo hacía).
+
+## Bluegrass/Disco 0.13.1
+- Sequoia: cambiar de «por tiempo» a «por distancia» más robusto (espera a que termine de parar, modo y parámetro en la misma petición, reintentos con la configuración completa) y explica la causa si aun así lo rechaza.

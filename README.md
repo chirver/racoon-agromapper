@@ -56,7 +56,7 @@
 Android may warn that the app is "unrecognised" (Play Protect) because it is not from the Play Store. Choose *Install anyway*.
 
 ### Install
-**[⬇ Download RacoonAgroMapper-0.13.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.13.apk)**, open it on the phone and allow installing from unknown sources. Older and newer builds: [`dist/`](dist) and [Releases](../../releases).
+**[⬇ Download RacoonAgroMapper-0.13.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.13.1.apk)**, open it on the phone and allow installing from unknown sources. Older and newer builds: [`dist/`](dist) and [Releases](../../releases).
 **ANAFI Thermal / 4K (3D missions, experimental):** [⬇ RacoonAgroMapper-ANAFI-0.16.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-ANAFI-0.16.1.apk). It installs alongside the Bluegrass/Disco app.
 
 ### Build
@@ -99,7 +99,7 @@ If the app saves your Bluegrass or Disco from the drawer, you can buy me a coffe
 - Android puede avisar de «app no reconocida» (Play Protect) porque no viene de la Play Store: pulsa *Instalar de todas formas*.
 
 ### Instalar
-**[⬇ Descargar RacoonAgroMapper-0.13.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.13.apk)**, ábrelo en el móvil y permite instalar apps de origen desconocido.
+**[⬇ Descargar RacoonAgroMapper-0.13.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-0.13.1.apk)**, ábrelo en el móvil y permite instalar apps de origen desconocido.
 **ANAFI Thermal / 4K (misiones 3D, experimental):** [⬇ RacoonAgroMapper-ANAFI-0.16.1.apk](https://github.com/chirver/racoon-agromapper/raw/main/dist/RacoonAgroMapper-ANAFI-0.16.1.apk). Se instala junto a la app de Bluegrass/Disco.
 
 ### Licencia

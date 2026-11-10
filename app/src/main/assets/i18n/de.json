@@ -897,5 +897,8 @@
  "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Wärmebild-Inspektion: Tippe die Ecken des Solarparks oder der Zone an (mindestens 3).",
  "Inspección térmica: vuela a 10 m o más.": "Wärmebild-Inspektion: in 10 m oder höher fliegen.",
  "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Über 10 m/s: Das Wärmebild verwischt und der Detektor kann kleine Punkte übersehen.",
- "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Vor dem Start Video auf Wärmebild mit absoluter Palette und aktivierter Warnung stellen: Der Detektor inspiziert."
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Vor dem Start Video auf Wärmebild mit absoluter Palette und aktivierter Warnung stellen: Der Detektor inspiziert.",
+ "· Estado de la captura: %1$s · GPS: %2$s": "· Aufnahmestatus: %1$s · GPS: %2$s",
+ "→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.": "→ Ohne GPS-Fix akzeptiert sie „nach Distanz“ evtl. nicht: ins Freie bringen, Fix abwarten und erneut senden.",
+ "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Sequoia 10 s vom Strom trennen und den Plan erneut senden."
 }

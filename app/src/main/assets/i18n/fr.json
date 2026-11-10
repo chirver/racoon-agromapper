@@ -897,5 +897,8 @@
  "Inspección térmica: toca las esquinas de la planta solar o de la zona a barrer (mínimo 3).": "Inspection thermique : touchez les coins de la centrale solaire ou de la zone (3 minimum).",
  "Inspección térmica: vuela a 10 m o más.": "Inspection thermique : volez à 10 m ou plus.",
  "Más de 10 m/s: la imagen térmica sale movida y el detector puede saltarse puntos pequeños.": "Plus de 10 m/s : l'image thermique est floue et le détecteur peut manquer de petits points.",
- "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Passez la vidéo en thermique avec la palette absolue et l'alerte activée avant le décollage : c'est le détecteur qui inspecte."
+ "Pon el vídeo en térmica con la paleta absoluta y el aviso activado antes de despegar: el detector es quien inspecciona.": "Passez la vidéo en thermique avec la palette absolue et l'alerte activée avant le décollage : c'est le détecteur qui inspecte.",
+ "· Estado de la captura: %1$s · GPS: %2$s": "· État de la capture : %1$s · GPS : %2$s",
+ "→ Puede que no admita «por distancia» sin posición GPS: sácala al cielo abierto, espera el fix y vuelve a enviar.": "→ Elle n'accepte peut-être pas « par distance » sans position GPS : sortez-la à ciel ouvert, attendez le fix et renvoyez.",
+ "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Débranchez la Sequoia 10 s et renvoyez le plan."
 }
