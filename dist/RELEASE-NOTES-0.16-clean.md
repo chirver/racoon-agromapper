@@ -16,3 +16,6 @@
 
 ## ANAFI 0.16.2 · Bluegrass/Disco 0.13.2
 - Vídeo a pantalla completa (botón ⛶): telemetría y avisos encima; rumbo y, en la Disco, distancia y rumbo al punto de toma. Para aterrizar a mano en FPV y para búsqueda/inspección. Atrás o ✕ para salir.
+
+## ANAFI 0.16.3 · Bluegrass/Disco 0.13.3
+- Modo gafas (👓 en pantalla completa): pantalla partida con corrección de lente para Parrot Cockpitglasses (perfil oficial Cockpit Glasses 2), con telemetría y avisos dentro de la imagen. ANAFI con el visor de GroundSDK; Bluegrass/Disco con un visor propio adaptado del de GroundSDK. Se sale tocando la pantalla o con atrás.

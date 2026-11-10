@@ -903,5 +903,6 @@
  "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Scollega la Sequoia per 10 s e reinvia il piano.",
  "\nRUMBO %1$s": "\nPRUA %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  ATTERRAGGIO %1$s m a %2$s°",
- "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia non ha ancora cambiato modalità: nuovo tentativo…"
+ "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia non ha ancora cambiato modalità: nuovo tentativo…",
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Modalità occhiali: inserisci il telefono negli occhiali. Per uscire, estrailo e tocca lo schermo."
 }

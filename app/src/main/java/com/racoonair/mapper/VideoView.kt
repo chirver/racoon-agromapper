@@ -44,6 +44,20 @@ class VideoView(ctx: Context) : SurfaceView(ctx), SurfaceHolder.Callback, VideoS
 
     init { holder.addCallback(this) }
 
+    /** Salida alternativa (modo gafas): el vídeo se pinta en esta Surface en vez de en la vista. null = volver. */
+    private var external: android.view.Surface? = null
+    fun setExternalSurface(s: android.view.Surface?) {
+        lock.lock()
+        try {
+            external = s
+            val c = codec ?: return
+            val target = s ?: holder.surface
+            if (configured) {
+                try { c.setOutputSurface(target) } catch (t: Throwable) { configureCodec() }
+            } else if (sps != null) configureCodec()
+        } finally { lock.unlock() }
+    }
+
     /** Mantiene la proporción 16:9 del vídeo dentro del hueco disponible. */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec); val h = MeasureSpec.getSize(heightMeasureSpec)
@@ -103,7 +117,7 @@ class VideoView(ctx: Context) : SurfaceView(ctx), SurfaceHolder.Callback, VideoS
             val f = MediaFormat.createVideoFormat(MIME, W, H)
             f.setByteBuffer("csd-0", ByteBuffer.wrap(s))
             f.setByteBuffer("csd-1", ByteBuffer.wrap(p))
-            c.configure(f, holder.surface, null, 0)
+            c.configure(f, external ?: holder.surface, null, 0)
             c.start()
             configured = true
             waitIFrame = true

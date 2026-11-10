@@ -20,6 +20,7 @@ third-party software, each under its own licence.
 | ARSDK3 3.14 (Java classes + native libraries) | Parrot SA | BSD-3-Clause ([LICENSE-ARSDK.txt](LICENSE-ARSDK.txt)) | `build-local/arsdk-3.14.dex`, `app/libs/arsdk-3.14-classes.jar` (compile only), `app/src/main/jniLibs` |
 | Helper libraries used by that ARSDK build: jmdns, Apache Sanselan, AndroidX LocalBroadcastManager | Apache Software Foundation, jmdns authors, Google | Apache-2.0 | inside the ARSDK dex (class names shortened by the original build) |
 | Kotlin standard library | JetBrains | Apache-2.0 | both apps, at build time |
+| Lens profiles for goggles mode (`app/src/main/res/raw/hmd_models`, Parrot Cockpit Glasses 2 and other headsets) and the lens-correction method/shaders adapted in `GogglesView.kt` | Parrot Drones SAS | BSD-3-Clause | from the GroundSDK 1.8.0 demo app (`groundsdkdemo/src/main/res/raw/gsdkdemo_hmd_models`) and `groundsdk/hmd` |
 
 ## Where the binaries come from (honest version)
 

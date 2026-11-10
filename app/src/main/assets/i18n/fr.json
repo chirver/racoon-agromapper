@@ -903,5 +903,6 @@
  "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Débranchez la Sequoia 10 s et renvoyez le plan.",
  "\nRUMBO %1$s": "\nCAP %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  POSÉ %1$s m au %2$s°",
- "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia n'a pas encore changé de mode : nouvel essai…"
+ "· La Sequoia aún no cambia de modo: reintentando…": "· La Sequoia n'a pas encore changé de mode : nouvel essai…",
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Mode lunettes : placez le téléphone dans les lunettes. Pour quitter, retirez-le et touchez l'écran."
 }

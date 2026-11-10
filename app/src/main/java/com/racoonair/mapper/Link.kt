@@ -42,6 +42,9 @@ interface Link {
     fun createStreamView(ctx: android.content.Context): android.view.View? = null
     /** La pantalla que tenía el visor se cierra. */
     fun releaseStreamView() {}
+    /** Modo gafas con el visor del SDK (GroundSDK). null = el enlace no lo tiene (se usa GogglesView). */
+    fun createHmdView(ctx: android.content.Context, overlay: android.view.View): android.view.View? = null
+    fun releaseHmdView() {}
     /** ¿Está llegando vídeo al visor propio? null si el enlace no tiene visor propio. */
     fun streamAlive(): Boolean? = null
     /** ANAFI Thermal: ver la cámara térmica (true) o la RGB (false) en el vídeo. */

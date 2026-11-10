@@ -903,5 +903,6 @@
  "→ Desenchufa la Sequoia 10 s y vuelve a enviar el plan.": "→ Unplug the Sequoia for 10 s and send the plan again.",
  "\nRUMBO %1$s": "\nHDG %1$s",
  "  ·  TOMA %1$s m al %2$s°": "  ·  LANDING %1$s m at %2$s°",
- "· La Sequoia aún no cambia de modo: reintentando…": "· The Sequoia has not changed mode yet: retrying…"
+ "· La Sequoia aún no cambia de modo: reintentando…": "· The Sequoia has not changed mode yet: retrying…",
+ "Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla.": "Goggles mode: put the phone in the goggles. To exit, take it out and tap the screen."
 }

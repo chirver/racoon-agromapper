@@ -311,6 +311,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             }
         }
         refreshFullscreenAlerts()
+        feedGoggles()
         val fresh = link.streamAlive() ?: (System.currentTimeMillis() - videoView.lastFrameAt < 2000)
         if (::thermalTab.isInitialized) {
             val vis = if (link.hasThermal) View.VISIBLE else View.GONE
@@ -1018,6 +1019,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
         fsThermal = fsBtn("🌡") { link.setThermalView(!link.thermalView); fsThermal.text = if (link.thermalView) "🌡" else "📷"; thermalTab.text = if (link.thermalView) tr("🌡 Térmica") else tr("📷 RGB"); updateThermalOverlay() }
         fsBtns.addView(fsThermal, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
+        fsBtns.addView(fsBtn("👓") { setGoggles(true) }, LinearLayout.LayoutParams(dp(52), dp(44)).apply { rightMargin = dp(6) })
         fsBtns.addView(fsBtn("✕") { setFullscreen(false) }, LinearLayout.LayoutParams(dp(52), dp(44)))
         fsOverlay = FrameLayout(this)
         fsOverlay.addView(fsAlert, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
@@ -1052,6 +1054,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             osd.textSize = 17f
             setSystemBars(hidden = true)
         } else {
+            setGoggles(false)
             fsHolder.removeAllViews()
             fsHolder.visibility = View.GONE
             mapCard.addView(viewHolder, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330)).apply { topMargin = dp(6) })
@@ -1061,6 +1064,54 @@ class MainActivity : Activity(), DroneLink.Listener {
         }
         refreshFullscreenAlerts()
         updateOsd(link.telemetry)
+    }
+
+    // ---------------------------------------------------------------- modo gafas (Cockpitglasses / visores VR)
+
+    private var goggles: View? = null
+    private var gogglesGl: GogglesView? = null
+    private var hmdOsd: TextView? = null
+
+    /**
+     * Pantalla partida con corrección de lente para meter el móvil en las gafas. Se sale tocando la pantalla
+     * (al sacar el móvil de las gafas) o con atrás.
+     */
+    private fun setGoggles(on: Boolean) {
+        if (on == (goggles != null)) return
+        if (on) {
+            if (!fullscreen) setFullscreen(true)
+            val osdView = TextView(this).apply {
+                setTextColor(Color.WHITE); textSize = 15f; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                gravity = Gravity.CENTER; setShadowLayer(4f, 0f, 0f, Color.BLACK)
+            }
+            // ANAFI: visor de gafas de GroundSDK (Parrot). Bluegrass/Disco: el nuestro, con el mismo perfil de lentes.
+            val v = link.createHmdView(this, FrameLayout(this).apply {
+                addView(osdView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL))
+            })?.also { hmdOsd = osdView } ?: GogglesView(this) { surf -> videoView.setExternalSurface(surf) }.also { gogglesGl = it }
+            v.setOnClickListener { setGoggles(false) }
+            fsHolder.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            goggles = v
+            fsOverlay.visibility = View.GONE
+            // Brillo al máximo: dentro de las gafas se agradece.
+            window.attributes = window.attributes.apply { screenBrightness = 1f }
+            onLog(tr("Modo gafas: mete el móvil en las gafas. Para salir, sácalo y toca la pantalla."))
+            updateOsd(link.telemetry)
+        } else {
+            goggles?.let { fsHolder.removeView(it) }
+            if (gogglesGl != null) videoView.setExternalSurface(null) else link.releaseHmdView()
+            goggles = null; gogglesGl = null; hmdOsd = null
+            fsOverlay.visibility = View.VISIBLE
+            window.attributes = window.attributes.apply { screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE }
+        }
+    }
+
+    /** Telemetría y avisos dentro de la imagen de las gafas. */
+    private fun feedGoggles() {
+        if (goggles == null) return
+        val alert = if (alertBanner.visibility == View.VISIBLE) alertBanner.text.toString() else null
+        val color = if (alert?.startsWith("⛔") == true) C_RED else C_AMBER
+        gogglesGl?.setOverlay(osd.text.toString(), alert, color)
+        hmdOsd?.text = osd.text.toString() + (alert?.let { "\n\n" + it } ?: "")
     }
 
     private fun setSystemBars(hidden: Boolean) {
@@ -1089,6 +1140,7 @@ class MainActivity : Activity(), DroneLink.Listener {
 
     @Deprecated("Back gesture")
     override fun onBackPressed() {
+        if (goggles != null) { setGoggles(false); return }
         if (fullscreen) { setFullscreen(false); return }
         @Suppress("DEPRECATION") super.onBackPressed()
     }
