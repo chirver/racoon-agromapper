@@ -1,48 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Configuración de GroundSDK 1.8 (valores tomados de Pix4Dcapture, con la nube de Parrot desactivada) -->
+<!--
+  Racoon AgroMapper: ajustes de GroundSDK distintos de los valores por defecto oficiales
+  (third_party/groundsdk/res/*/values/config.xml). Se aplican como capa encima de ellos.
+  Sin envío de datos a servidores: ni informes de fallos, ni registros de vuelo, ni firmware, ni efemérides.
+-->
 <resources>
-    <bool name="gsdk_auto_connection_at_startup">false</bool>
-    <bool name="gsdk_auto_select_wifi_country">true</bool>
     <bool name="gsdk_blackbox_enabled">false</bool>
-    <bool name="gsdk_ble_enabled">false</bool>
     <bool name="gsdk_crash_report_enabled">false</bool>
-    <bool name="gsdk_dev_toolbox_enabled">false</bool>
     <bool name="gsdk_ephemeris_sync_enabled">false</bool>
     <bool name="gsdk_firmware_enabled">false</bool>
     <bool name="gsdk_flight_data_enabled">false</bool>
     <bool name="gsdk_flight_log_enabled">false</bool>
     <bool name="gsdk_gutma_log_enabled">false</bool>
-    <bool name="gsdk_rc_accessory_bootstrap_activity_enabled">true</bool>
-    <bool name="gsdk_usb_debug_enabled">false</bool>
-    <bool name="gsdk_usb_enabled">true</bool>
-    <bool name="gsdk_video_decoding_enabled">true</bool>
-    <bool name="gsdk_wifi_enabled">true</bool>
-    <integer name="arsdk_debug_usb_bridge_port">13579</integer>
-    <integer name="gsdk_blackbox_quota">0</integer>
-    <integer name="gsdk_crash_report_quota">0</integer>
-    <integer name="gsdk_flight_data_quota">0</integer>
-    <integer name="gsdk_flight_log_quota">0</integer>
-    <integer name="gsdk_gutma_log_quota">0</integer>
-    <integer name="gsdk_media_thumbnail_cache_size">0</integer>
+    <!-- Los ajustes del dron no se guardan en el móvil ni se reenvían al conectar -->
     <string name="gsdk_offline_settings_mode">OFF</string>
-    <string-array name="gsdk_supported_devices">
-        <item>SKY_CONTROLLER_3</item>
-        <item>SKY_CONTROLLER_UA</item>
-        <item>ANAFI_4K</item>
-        <item>ANAFI_THERMAL</item>
-        <item>ANAFI_UA</item>
-        <item>ANAFI_USA</item>
-    </string-array>
-    <string name="arsdk_debug_usb_bridge_address"></string>
-    <string name="gsdk_application_key"></string>
-    <string name="gsdk_blackbox_public_folder"></string>
-    <string name="gsdk_firmware_server"></string>
-    <string name="gsdk_reverse_geocoder_default_country_code"></string>
-    <!-- Recursos del motor arsdkengine (los lee aunque la función esté apagada; sin ellos GroundSDK no arranca) -->
-    <integer name="blackbox_buffer_capacity">25</integer>
-    <integer name="ephemeris_download_interval">48</integer>
-    <integer name="ephemeris_validity_period">72</integer>
-    <string name="ublox_api_token"></string>
-    <string name="ublox_ephemeris_main_server"></string>
-    <string name="ublox_ephemeris_backup_server"></string>
 </resources>

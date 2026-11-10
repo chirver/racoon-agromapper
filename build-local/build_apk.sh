@@ -8,7 +8,9 @@
 #   DX_JAR      -> dx-30.x.jar (viene dentro de dex2jar/dex-tools)
 #   STDLIB_JAR  -> kotlin-stdlib.jar
 #   AAPT2       -> aapt2 (p. ej. el que trae apktool en prebuilt/linux/aapt2_64)
-# Usa build-local/arsdk-3.14.dex (ARSDK3) y, en anafi, groundsdk-1.8-{a,b,c}.dex.
+# Usa build-local/arsdk-3.14.dex (ARSDK3). En anafi compila GroundSDK 1.8.0 desde el código oficial de Parrot
+# (third_party/groundsdk) con sus dependencias compiladas desde su código (build-local/groundsdk-deps.jar,
+# ver build-local/build_groundsdk_deps.sh). Las librerías nativas de GroundSDK van en app/src/anafi/jniLibs.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$HERE")"
@@ -21,8 +23,8 @@ rm -rf "$OUT" && mkdir -p "$OUT/classes" "$OUT/dex" "$OUT/apk/lib" "$OUT/gen"
 
 case "$FLAVOR" in
   parrot) PKG=com.racoonair.mapper; MANIFEST="$SRC/main/AndroidManifest.xml"; EXTRA_CP=""; EXTRA_PKGS="" ;;
-  anafi)  PKG=com.racoonair.mapper.anafi; MANIFEST="$SRC/anafi/AndroidManifest.xml"; EXTRA_CP=":$HERE/groundsdk-1.8-api.jar"
-          EXTRA_PKGS="--extra-packages com.parrot.drone.groundsdk:com.parrot.drone.groundsdk.arsdkengine:com.parrot.drone.groundsdk.sdkcore:com.google.android.gms.common:com.google.android.gms.base" ;;
+  anafi)  PKG=com.racoonair.mapper.anafi; MANIFEST="$SRC/anafi/AndroidManifest.xml"; EXTRA_CP=":$HERE/groundsdk-deps.jar"
+          EXTRA_PKGS="--extra-packages com.parrot.drone.groundsdk:com.parrot.drone.groundsdk.arsdkengine:com.parrot.drone.groundsdk.sdkcore" ;;
   *) echo "FLAVOR desconocido: $FLAVOR"; exit 1 ;;
 esac
 echo "== Sabor: $FLAVOR ($PKG) =="
@@ -36,13 +38,27 @@ open(sys.argv[2], 'w').write(src)
 PYEOF
 RES_ZIPS=("$OUT/res-main.zip")
 "$AAPT2" compile --dir "$SRC/main/res" -o "$OUT/res-main.zip"
-if [ -d "$SRC/$FLAVOR/res" ]; then "$AAPT2" compile --dir "$SRC/$FLAVOR/res" -o "$OUT/res-$FLAVOR.zip"; RES_ZIPS+=("$OUT/res-$FLAVOR.zip"); fi
+if [ "$FLAVOR" = anafi ]; then
+  # Recursos oficiales de GroundSDK; los del sabor van ENCIMA (-R) para cambiar solo lo que hace falta.
+  for m in groundsdk arsdkengine sdkcore; do
+    "$AAPT2" compile --dir "$ROOT/third_party/groundsdk/res/$m" -o "$OUT/res-gsdk-$m.zip"; RES_ZIPS+=("$OUT/res-gsdk-$m.zip")
+  done
+fi
+if [ -d "$SRC/$FLAVOR/res" ]; then "$AAPT2" compile --dir "$SRC/$FLAVOR/res" -o "$OUT/res-$FLAVOR.zip"; RES_ZIPS+=(-R "$OUT/res-$FLAVOR.zip"); fi
 # El código vive en com.racoonair.mapper; el id de la app puede cambiar (ANAFI) para instalarse a la vez.
 "$AAPT2" link -I "$ANDROID_JAR" --manifest "$OUT/AndroidManifest.xml" -o "$OUT/base.apk" \
   --min-sdk-version 26 --target-sdk-version 29 --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   --rename-manifest-package "$PKG" --java "$OUT/gen" $EXTRA_PKGS \
-  $( [ -d "$SRC/main/assets" ] && echo -A "$SRC/main/assets" ) "${RES_ZIPS[@]}"
-javac -nowarn --release 8 -d "$OUT/classes" $(find "$OUT/gen" -name '*.java')
+  --auto-add-overlay $( [ -d "$SRC/main/assets" ] && echo -A "$SRC/main/assets" ) "${RES_ZIPS[@]}"
+if [ "$FLAVOR" = anafi ]; then
+  echo "[0b/6] GroundSDK 1.8.0 (código oficial) → .class"
+  find "$OUT/gen" "$ROOT/third_party/groundsdk/java" -name '*.java' > "$OUT/gsdk-src.txt"
+  javac -nowarn --release 8 -cp "$ANDROID_JAR:$HERE/groundsdk-deps.jar:$STDLIB_JAR" \
+    -encoding UTF-8 -d "$OUT/classes" @"$OUT/gsdk-src.txt" 2>&1 | grep -v '^Note:\|^warning:\|^1 warning' || true
+  [ -f "$OUT/classes/com/parrot/drone/groundsdk/GroundSdk.class" ] || { echo "ERROR compilando GroundSDK"; exit 1; }
+else
+  javac -nowarn --release 8 -d "$OUT/classes" $(find "$OUT/gen" -name '*.java')
+fi
 
 echo "[1/6] Kotlin → .class"
 "$KOTLINC" "$SRC/main/java" "$SRC/$FLAVOR/java" -cp "$ANDROID_JAR:$ROOT/app/libs/arsdk-3.14-classes.jar$EXTRA_CP:$OUT/classes" \
@@ -53,18 +69,14 @@ echo "[2/6] kotlin-stdlib limpio"
 mkdir -p "$OUT/std" && (cd "$OUT/std" && unzip -qo "$STDLIB_JAR" -x 'META-INF/*' && find . -name module-info.class -delete && zip -qr ../stdlib.jar .)
 
 echo "[3/6] .class → classes.dex (dx)"
+DX_IN=("$OUT/app.jar" "$OUT/stdlib.jar")
+[ "$FLAVOR" = anafi ] && DX_IN+=("$HERE/groundsdk-deps.jar")
 java -Xmx3g -cp "$DX_JAR" com.android.dx.command.Main --dex --min-sdk-version=26 --multi-dex \
-  --output="$OUT/dex" "$OUT/app.jar" "$OUT/stdlib.jar"
-cp "$OUT/dex/classes.dex" "$OUT/apk/classes.dex"
-DEXES=(classes.dex classes2.dex)
-cp "$HERE/arsdk-3.14.dex" "$OUT/apk/classes2.dex"
-if [ "$FLAVOR" = anafi ]; then
-  cp "$HERE/groundsdk-1.8-a.dex" "$OUT/apk/classes3.dex"
-  cp "$HERE/groundsdk-1.8-b.dex" "$OUT/apk/classes4.dex"
-  # Clases auxiliares (ofuscadas) de las que depende GroundSDK: lambdas, protobuf, okhttp, androidx…
-  cp "$HERE/groundsdk-1.8-c.dex" "$OUT/apk/classes5.dex"
-  DEXES+=(classes3.dex classes4.dex classes5.dex)
-fi
+  --output="$OUT/dex" "${DX_IN[@]}"
+DEXES=()
+n=0
+for f in $(ls "$OUT/dex" | sort -V); do n=$((n+1)); d=$( [ $n = 1 ] && echo classes.dex || echo classes$n.dex ); cp "$OUT/dex/$f" "$OUT/apk/$d"; DEXES+=("$d"); done
+n=$((n+1)); cp "$HERE/arsdk-3.14.dex" "$OUT/apk/classes$n.dex"; DEXES+=("classes$n.dex")
 
 echo "[5/6] dex + librerías nativas"
 cp "$OUT/base.apk" "$OUT/unsigned.apk"
