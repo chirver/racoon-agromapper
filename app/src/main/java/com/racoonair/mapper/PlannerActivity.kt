@@ -603,10 +603,10 @@ class PlannerActivity : Activity(), MapView.Listener {
     /** 0 nada · 1 esperando el punto de toma · 2 esperando de dónde llega el avión. */
     private var landStep = 0
 
-    private val isDisco get() = prefs.getString("airframe", "BLUEGRASS") == "DISCO"
+    private val isDisco get() = Flavor.FIXED_WING && prefs.getString("airframe", "BLUEGRASS") == "DISCO"
 
     private fun updateAirframeUi() {
-        airBtn.text = if (isDisco) tr("✈ Disco") else tr("✚ Bluegrass")
+        airBtn.text = if (!Flavor.FIXED_WING) tr("✚ ANAFI") else if (isDisco) tr("✈ Disco") else tr("✚ Bluegrass")
         setBtnColor(airBtn, if (isDisco) C_AMBER else C_BLUE)
         discoRow.visibility = if (isDisco) View.VISIBLE else View.GONE
         camBtn.text = if (Session.fixedWing.droneCamera) tr("📷 Dron") else tr("📷 Libre")
@@ -615,6 +615,7 @@ class PlannerActivity : Activity(), MapView.Listener {
     }
 
     private fun toggleAirframe() {
+        if (!Flavor.FIXED_WING) { Toast.makeText(this, tr("Esta app es para la ANAFI (multirrotor)"), Toast.LENGTH_SHORT).show(); return }
         val next = if (isDisco) "BLUEGRASS" else "DISCO"
         prefs.edit().putString("airframe", next).apply()
         landStep = 0

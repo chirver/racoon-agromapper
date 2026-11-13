@@ -1292,14 +1292,15 @@ class MainActivity : Activity(), DroneLink.Listener {
     /** La Disco no puede volar planes de multirrotor: bloquea los de este planificador y avisa con los demás. */
     private fun discoGate(p: FlightPlan, then: () -> Unit) {
         val model = link.telemetry.droneModel
-        if (model == 1 && p.isFixedWing) {
+        if ((model == 1 || model == 3 || !Flavor.FIXED_WING) && p.isFixedWing) {
             AlertDialog.Builder(this).setTitle(tr("⛔ Plan de ala fija"))
                 .setMessage(tr("Este plan es para la DISCO (sin despegue, con aproximación y aterrizaje en pista). ") +
-                    tr("La Bluegrass necesita un plan de multirrotor: en el planificador cambia a «✚ Bluegrass»."))
+                    (if (Flavor.FIXED_WING) tr("La Bluegrass necesita un plan de multirrotor: en el planificador cambia a «✚ Bluegrass».")
+                     else tr("La ANAFI necesita un plan de multirrotor: genera el plan de nuevo en el planificador.")))
                 .setPositiveButton(tr("Entendido"), null).show()
             return
         }
-        if (model == 0) {
+        if (model == 0 && Flavor.FIXED_WING) {
             AlertDialog.Builder(this).setTitle(tr("¿Qué dron es?"))
                 .setMessage(tr("El dron aún no se ha identificado (Bluegrass o Disco). Espera unos segundos a que se enlace y vuelve a intentarlo."))
                 .setPositiveButton(tr("Entendido"), null).show(); return
@@ -1469,8 +1470,8 @@ class MainActivity : Activity(), DroneLink.Listener {
     // ------------------------------------------------------------------ meteo + Kp
 
     private fun airframeNow(): Airframe = when (link.telemetry.droneModel) {
-        1 -> Airframe.BLUEGRASS; 2 -> Airframe.DISCO
-        else -> if (prefs.getString("airframe", "BLUEGRASS") == "DISCO") Airframe.DISCO else Airframe.BLUEGRASS
+        1 -> Airframe.BLUEGRASS; 2 -> Airframe.DISCO; 3 -> Airframe.ANAFI
+        else -> if (!Flavor.FIXED_WING) Airframe.ANAFI else if (prefs.getString("airframe", "BLUEGRASS") == "DISCO") Airframe.DISCO else Airframe.BLUEGRASS
     }
 
     /** Dónde mirar el tiempo: dron, casa del plan, primer waypoint o última posición del móvil. */
@@ -1554,7 +1555,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             .setMessage(sb.toString())
             .setPositiveButton("OK", null)
             .setNeutralButton(tr("Actualizar")) { _, _ -> Session.weather = null; onWeatherClicked() }
-        if (link.telemetry.droneModel == 0) b.setNegativeButton(if (a == Airframe.DISCO) tr("Ver para Bluegrass") else tr("Ver para Disco")) { _, _ ->
+        if (link.telemetry.droneModel == 0 && Flavor.FIXED_WING) b.setNegativeButton(if (a == Airframe.DISCO) tr("Ver para Bluegrass") else tr("Ver para Disco")) { _, _ ->
             prefs.edit().putString("airframe", if (a == Airframe.DISCO) "BLUEGRASS" else "DISCO").apply()
             showWeather(r)
         }

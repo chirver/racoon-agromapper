@@ -909,5 +909,9 @@
  "SIN GPS": "PAS DE GPS",
  "CASA —": "MAISON —",
  "CASA %1$s": "MAISON %1$s",
- "RUMBO %1$s": "CAP %1$s"
+ "RUMBO %1$s": "CAP %1$s",
+ "ANAFI (multirrotor)": "ANAFI (multirotor)",
+ "La ANAFI necesita un plan de multirrotor: genera el plan de nuevo en el planificador.": "L'ANAFI a besoin d'un plan multirotor : générez à nouveau le plan dans le planificateur.",
+ "✚ ANAFI": "✚ ANAFI",
+ "Esta app es para la ANAFI (multirrotor)": "Cette application est pour l'ANAFI (multirotor)"
 }

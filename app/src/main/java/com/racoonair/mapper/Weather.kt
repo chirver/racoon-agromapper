@@ -35,7 +35,9 @@ enum class Airframe(
     BLUEGRASS(tr("Bluegrass (multirrotor)"), 8.0, 6.0, 8.0, 10.0, 0.0, 40.0, 25.0, null, false),
     // Disco: 45 min (Parrot). Crucero 40–50 km/h → 12,5 m/s. Rojo antes del límite del fabricante (12 m/s),
     // porque con 10 m/s de cara el avance contra el viento es de ~2,5 m/s y la vuelta se eterniza.
-    DISCO(tr("Disco (ala fija)"), 12.0, 7.0, 10.0, 12.0, 0.0, 40.0, 45.0, 12.5, true);
+    DISCO(tr("Disco (ala fija)"), 12.0, 7.0, 10.0, 12.0, 0.0, 40.0, 45.0, 12.5, true),
+    // ANAFI Thermal / 4K: viento máx. 50 km/h (≈14 m/s), 25–26 min, de −10 a 40 °C (Parrot).
+    ANAFI(tr("ANAFI (multirrotor)"), 14.0, 8.0, 11.0, 14.0, -10.0, 40.0, 25.0, null, false);
 
     /**
      * Cuánto se alarga el vuelo con viento W (m/s) respecto a la calma.

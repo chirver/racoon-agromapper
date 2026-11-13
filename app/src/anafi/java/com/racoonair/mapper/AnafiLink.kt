@@ -214,6 +214,8 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         }
         val d = drone
         telemetry.productName = d?.name ?: ""
+        // 3 = ANAFI: el resto de la app lo trata como multirrotor sin preguntar «Bluegrass o Disco».
+        if (d != null) telemetry.droneModel = 3
         telemetry.extension = if (d != null) "${d.model} · ${rc?.let { "vía ${it.model}" } ?: "WiFi"}" else ""
         if (cs == DeviceState.ConnectionState.DISCONNECTED) {
             val cause = st.connectionStateCause

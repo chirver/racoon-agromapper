@@ -6,6 +6,8 @@ import android.content.Context
 object Flavor {
     const val TITLE = "ANAFI Thermal / 4K / USA"
     val platforms = setOf(Platform.ANAFI)
+    /** Solo multirrotor (ANAFI): sin modo Disco ni selección Bluegrass/Disco. */
+    const val FIXED_WING = false
     fun supports(p: Platform) = p in platforms
     fun newLink(p: Platform, ctx: Context, l: DroneLink.Listener): Link = AnafiLink(ctx, l)
 }
