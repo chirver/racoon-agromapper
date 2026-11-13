@@ -1600,8 +1600,31 @@ class MainActivity : Activity(), DroneLink.Listener {
                 .setPositiveButton(tr("Entendido"), null).show()
             return
         }
+        // Calibraciones y fallos que impiden volar con seguridad: no se inicia. Se calibran con la app oficial.
+        val official = if (Flavor.FIXED_WING) "FreeFlight Pro" else "FreeFlight 6"
+        val blockers = ArrayList<String>()
+        if (t.magnetoCalibrationRequired == true) blockers.add(trf("La brújula necesita calibración: hazla con %1\$s.", official))
+        if (t.droneModel == 2 && t.pitotState == 3) blockers.add(trf("El pitot de la Disco necesita calibración: hazla con %1\$s.", official))
+        if (t.motorError != 0) blockers.add(tr("El dron indica un error de motor: revisa hélices y motores."))
+        // IMU, barómetro y magnetómetro son imprescindibles; el resto (GPS, ultrasonidos, cámara vertical) solo avisa.
+        val vital = setOf("IMU", tr("Barómetro"), tr("Magnetómetro"))
+        t.sensors.filterValues { !it }.keys.forEach {
+            if (it in vital) blockers.add(trf("Sensor con fallo: %1\$s. Reinicia el dron; si sigue, revísalo con %2\$s.", it, official))
+            else issues.add(trf("Sensor con fallo: %1\$s. Reinicia el dron; si sigue, revísalo con %2\$s.", it, official))
+        }
+        if (blockers.isNotEmpty()) {
+            AlertDialog.Builder(this).setTitle(tr("⛔ No se puede iniciar"))
+                .setMessage("• " + blockers.joinToString("\n• "))
+                .setPositiveButton(tr("Entendido"), null).show()
+            return
+        }
         if (t.battery in 0..39) issues.add(trf("Batería del dron al %1\$s %%.", t.battery))
-        if (t.magnetoCalibrationRequired == true) issues.add(tr("El dron pide calibrar el magnetómetro."))
+        if (t.magnetoCalibrationRecommended) issues.add(trf("El dron recomienda calibrar la brújula (%1\$s).", official))
+        if (t.droneModel == 2 && t.pitotError) issues.add(trf("La última calibración del pitot dio error: repítela con %1\$s.", official))
+        if (t.gimbalCalibrated == false) issues.add(trf("El gimbal no está calibrado (%1\$s).", official))
+        if (t.batteryHealth in 0..69) issues.add(trf("Salud de la batería al %1\$s %%: autonomía menor de la esperada.", t.batteryHealth))
+        // Alarmas activas del dron (ANAFI: magnetómetro, batería, vibraciones, viento…).
+        t.extraAlerts.forEach { issues.add(it.removePrefix("⛔ ").removePrefix("⚠ ")) }
         if (t.planAvailable == false) issues.add(tr("El dron dice que el plan NO está disponible."))
         t.components.filterValues { !it }.keys.forEach { issues.add(trf("Comprobación fallida: %1\$s", it)) }
         issues.addAll(p.warnings())
@@ -1919,6 +1942,10 @@ class MainActivity : Activity(), DroneLink.Listener {
             for ((k, v) in t.components) append("${if (v) "✔" else "✘"} $k\n")
             t.planAvailable?.let { append(if (it) tr("✔ Plan disponible para iniciar") else tr("✘ Plan no disponible todavía")) }
             t.magnetoCalibrationRequired?.let { if (it) append(tr("\n✘ Requiere calibrar magnetómetro")) }
+            if (t.magnetoCalibrationRecommended) append(tr("\n⚠ Se recomienda calibrar la brújula"))
+            if (t.pitotState >= 0) append(trf("\nPitot       %1\$s", arrayOf(tr("calibrado"), tr("preparado"), tr("calibrando"), tr("✘ REQUIERE CALIBRACIÓN")).getOrElse(t.pitotState) { "?" } + if (t.pitotError) tr(" (último intento con error)") else ""))
+            t.gimbalCalibrated?.let { append(trf("\nGimbal      %1\$s", if (it) tr("calibrado") else tr("✘ sin calibrar"))) }
+            if (t.batteryHealth >= 0) append(trf("\nSalud bat.  %1\$s %%", t.batteryHealth))
             if (link.platform == Platform.BLUEGRASS_SEQUOIA)
                 append(if (t.sequoiaSeen) tr("\n✔ Sequoia reconocida por el dron") + (if (t.accessories.isNotEmpty()) " (${t.accessories})" else "")
                        else tr("\n✘ El dron no informa de ninguna Sequoia (¿cable? ¿firmware?)"))

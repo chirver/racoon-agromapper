@@ -91,6 +91,14 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         var planError: String = "",
         var missionItem: Int = -1,
         var magnetoCalibrationRequired: Boolean? = null,
+        /** ANAFI: la brújula recomienda calibrar (no la exige). */
+        var magnetoCalibrationRecommended: Boolean = false,
+        /** Disco: pitot 0 hecho, 1 preparado (esperando), 2 en curso, 3 requerido; -1 sin dato. */
+        var pitotState: Int = -1,
+        var pitotError: Boolean = false,
+        /** ANAFI: gimbal calibrado (null sin dato) y salud de la batería en % (-1 sin dato). */
+        var gimbalCalibrated: Boolean? = null,
+        var batteryHealth: Int = -1,
         var planAvailable: Boolean? = null,
         val components: LinkedHashMap<String, Boolean> = LinkedHashMap(),
         var navigateHome: String = "—",
@@ -620,6 +628,9 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_COMPONENT,
                 ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_FLIGHTPLANSTATE_COMPONENTSTATELISTCHANGED_STATE),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_MAGNETOCALIBRATIONREQUIREDSTATE_REQUIRED),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED to listOf(
+                ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED_STATE,
+                ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED_LASTERROR),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY_VALUE),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED to listOf(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_WIFISIGNALCHANGED_RSSI),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED to listOf(ARFeatureSkyController.ARCONTROLLER_DICTIONARY_KEY_SKYCONTROLLER_WIFISTATE_WIFISIGNALCHANGED_LEVEL),
@@ -637,6 +648,12 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
     private fun handle(key: ARCONTROLLER_DICTIONARY_KEY_ENUM, s: Map<String, Any?>?, all: List<Map<String, Any?>>) {
         val t = telemetry
         when (key) {
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED -> {
+                num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED_STATE)?.toInt()?.let {
+                    if (it != t.pitotState) log(trf("Pitot: %1\$s", arrayOf(tr("calibrado"), tr("preparado"), tr("calibrando"), tr("REQUIERE CALIBRACIÓN")).getOrElse(it) { "estado $it" }))
+                    t.pitotState = it }
+                num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_CALIBRATIONSTATE_PITOTCALIBRATIONSTATECHANGED_LASTERROR)?.let { t.pitotError = it.toInt() == 1 }
+            }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY ->
                 num(s, ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_LINKSIGNALQUALITY_VALUE)?.let { v ->
                     val q = v.toInt() and 0x0F; if (q in 1..5) t.linkQuality = q }
@@ -798,7 +815,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         t.accessories = ""; t.sequoiaSeen = false
         t.flyingState = "—"; t.flyingStateRaw = -1; t.altitude = Double.NaN; t.lat = 500.0; t.lon = 500.0
         t.speed = Double.NaN; t.yawDeg = Double.NaN; t.linkQuality = -1; t.rssi = 0; t.homeLat = 500.0; t.homeLon = 500.0; t.planState = "—"; t.planStateRaw = -1; t.planPlaying = false; t.planError = ""
-        t.missionItem = -1; t.magnetoCalibrationRequired = null; t.planAvailable = null
+        t.missionItem = -1; t.magnetoCalibrationRequired = null; t.magnetoCalibrationRecommended = false; t.pitotState = -1; t.pitotError = false; t.gimbalCalibrated = null; t.batteryHealth = -1; t.planAvailable = null
         t.alert = -1; t.wind = -1; t.navHomeReason = -1; t.rthBattery = -1; t.motorError = 0
         t.rthOnDisconnect = -1; t.rthOnDisconnectReadOnly = false; t.sensors.clear()
         t.radioCalibStatus = -1; t.radioCalibResult = -1

@@ -148,7 +148,18 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         model = d.model
         log("Dron: ${d.name} (${d.model})")
         droneRefs += d.getState { st -> onState(st) }
-        droneRefs += d.getInstrument(BatteryInfo::class.java) { b -> telemetry.battery = b?.batteryLevel ?: -1; changed() }
+        droneRefs += d.getInstrument(BatteryInfo::class.java) { b ->
+            telemetry.battery = b?.batteryLevel ?: -1
+            telemetry.batteryHealth = try { b?.batteryHealth?.let { if (it.isAvailable) it.value else -1 } ?: -1 } catch (_: Throwable) { -1 }
+            changed()
+        }
+        droneRefs += d.getPeripheral(com.parrot.drone.groundsdk.device.peripheral.Magnetometer::class.java) { m ->
+            val st = m?.calibrationState()
+            telemetry.magnetoCalibrationRequired = if (st == null) null
+                else st == com.parrot.drone.groundsdk.device.peripheral.Magnetometer.MagnetometerCalibrationState.REQUIRED
+            telemetry.magnetoCalibrationRecommended = st == com.parrot.drone.groundsdk.device.peripheral.Magnetometer.MagnetometerCalibrationState.RECOMMENDED
+            changed()
+        }
         droneRefs += d.getInstrument(Gps::class.java) { g ->
             telemetry.gpsFix = g?.isFixed == true
             telemetry.satellites = g?.satelliteCount ?: -1
@@ -199,7 +210,11 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             if (liveRef == null) liveRef = s.live { cl -> live = cl; bindStream() }
         }
         droneRefs += d.getPeripheral(MainCamera::class.java) { c -> mainCam = c; camActive("RGB", c?.isActive) }
-        droneRefs += d.getPeripheral(Gimbal::class.java) { g -> gimbal = g }
+        droneRefs += d.getPeripheral(Gimbal::class.java) { g ->
+            gimbal = g
+            telemetry.gimbalCalibrated = try { g?.isCalibrated } catch (_: Throwable) { null }
+            changed()
+        }
         droneRefs += d.getPeripheral(ThermalCamera::class.java) { c -> thermalCam = c; camActive("térmica", c?.isActive) }
     }
 
@@ -272,7 +287,10 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
             Alarms.Alarm.Kind.AUTOMATIC_LANDING_BATTERY_ISSUE to "ATERRIZAJE AUTOMÁTICO por batería",
             Alarms.Alarm.Kind.STRONG_VIBRATIONS to "Vibraciones fuertes",
             Alarms.Alarm.Kind.MAGNETOMETER_PERTURBATION to "Perturbación del magnetómetro",
-            Alarms.Alarm.Kind.MAGNETOMETER_LOW_EARTH_FIELD to "Campo magnético débil"
+            Alarms.Alarm.Kind.MAGNETOMETER_LOW_EARTH_FIELD to "Campo magnético débil",
+            Alarms.Alarm.Kind.VERTICAL_CAMERA to "Cámara vertical con problemas (estabilización sin GPS)",
+            Alarms.Alarm.Kind.HEADING_LOCK to "Rumbo bloqueado: brújula del dron perturbada",
+            Alarms.Alarm.Kind.UNRELIABLE_CONTROLLER_LOCATION to "Ubicación del mando poco fiable"
         )
         for ((k, txt) in named) when (lvl(k)) {
             Alarms.Alarm.Level.CRITICAL -> t.extraAlerts.add("⛔ $txt")
