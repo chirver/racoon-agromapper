@@ -78,12 +78,16 @@ object ThermalScan {
                       /** Diagnóstico: colores más frecuentes del fotograma («#rrggbb ×n»), para ver qué paleta pinta el dron. */
                       val colors: String = "")
 
-    /** Un punto caliente ocupa entre el 0,05 % y el 30 % de la imagen. Más = todo el suelo caliente, no aviso. */
-    private const val HOT_MIN_FRAC = 0.0005
+    /**
+     * Un punto caliente son al menos [HOT_MIN_N] muestras y como mucho el 30 % de la imagen (más = todo el suelo caliente).
+     * Con 2 basta: una cabeza vista desde 20–30 m ocupa 1–3 píxeles del sensor térmico (160×120).
+     */
+    private const val HOT_MIN_N = 2
     private const val HOT_MAX_FRAC = 0.30
 
-    private const val COLS = 96
-    private const val ROWS = 72
+    /** Una muestra por píxel del sensor térmico de la ANAFI (160×120): no se pierde nada pequeño. */
+    private const val COLS = 160
+    private const val ROWS = 120
     /** Distancia de color máxima para aceptar que un píxel es de la paleta (texto, bordes, artefactos fuera). */
     private const val MAX_DIST2 = 60 * 60 * 3
 
@@ -181,7 +185,7 @@ object ThermalScan {
         return LatLon(lat + north / 110540.0, lon + east / (111320.0 * Math.cos(Math.toRadians(lat))))
     }
 
-    private fun isSpot(n: Int, valid: Int) = valid > 200 && n >= 3 && n.toDouble() / valid in HOT_MIN_FRAC..HOT_MAX_FRAC
+    private fun isSpot(n: Int, valid: Int) = valid > 200 && n >= HOT_MIN_N && n.toDouble() / valid <= HOT_MAX_FRAC
 
     /** Índice 0..255 de la paleta hierro más parecido al color, o null si no se parece a ninguno. -2 = sin calcular. */
     private val cache = IntArray(1 shl 18) { -2 }

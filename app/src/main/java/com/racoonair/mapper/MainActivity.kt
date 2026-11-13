@@ -574,8 +574,9 @@ class MainActivity : Activity(), DroneLink.Listener {
                     eDelta.setText(delta.toString()); cAlert.isChecked = true; cPause.isChecked = pause
                 }
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        // Persona: piel 28–34 °C; de noche o con fresco destaca mucho sobre el suelo.
-        preset(tr("Persona"), 0, 40, 28, 0, false)
+        // Persona: la piel da 28–34 °C de cerca, pero desde el aire una cabeza ocupa 1–3 píxeles y se mezcla con el
+        // suelo: se ve a 22–27 °C. Aviso a 25 °C o 5 °C por encima del suelo (lo que llegue antes): sirve con ropa y con frío.
+        preset(tr("Persona"), 0, 40, 25, 5, false)
         // Placas solares: célula defectuosa 10–20 °C más caliente que sus vecinas; con sol el panel ronda 40–60 °C.
         preset(tr("Placas solares"), 10, 90, 85, 12, true)
         // Rescoldos / incendio: brasas muy por encima del suelo.
