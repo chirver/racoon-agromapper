@@ -50,6 +50,8 @@ interface Link {
     /** ANAFI Thermal: ver la cámara térmica (true) o la RGB (false) en el vídeo. */
     val hasThermal: Boolean get() = false
     val thermalView: Boolean get() = false
+    /** El vídeo térmico llega coloreado con nuestra paleta (se puede leer la temperatura y detectar puntos calientes). */
+    val thermalColored: Boolean get() = true
     fun setThermalView(on: Boolean) {}
     /** Reenviar la paleta según [Session.thermal]. */
     fun applyThermalPrefs() {}

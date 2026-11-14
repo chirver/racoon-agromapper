@@ -105,6 +105,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     }
 
     override fun disconnect() {
+        startWait?.let { main.removeCallbacks(it) }; startWait = null
         log("Desconectando…")
         try { autoConnRef?.get()?.stop() } catch (_: Throwable) {}
         try { drone?.disconnect() } catch (_: Throwable) {}
@@ -405,26 +406,34 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
 
     override fun startMission() {
         val p = fp ?: run { log("No conectado."); return }
+        if (startWait != null) { log("Ya estoy preparando la cámara: el plan arrancará solo."); return }
         telemetry.missionItem = -1
         lastMissionItem = -1
-        startWait?.let { main.removeCallbacks(it) }; startWait = null
         // Sin fotos en el plan (p. ej. barrido térmico) la cámara da igual.
         if (!planHasPhotos() || cameraReady()) { activatePlan(p); return }
-        // Antes el usuario tenía que volver a pulsar INICIAR (y volvía a salir la lista: bucle).
-        // Ahora se configura la cámara y el plan arranca SOLO en cuanto esté lista.
+        // Con fotos: si se arranca con la cámara no disponible, el dron despega y se queda en el primer punto
+        // esperando a hacer la primera foto. Así que se espera a la cámara y, si no responde, NO se arranca.
         prepareCamera()
         log("Preparando la cámara para las fotos… el plan arrancará solo en unos segundos.")
         val t0 = System.currentTimeMillis()
+        var rgbOnly = false
         val r = object : Runnable {
             override fun run() {
                 val fp2 = fp ?: run { startWait = null; return }
+                val el = System.currentTimeMillis() - t0
                 when {
                     cameraReady() -> { startWait = null; activatePlan(fp2) }
-                    System.currentTimeMillis() - t0 > 12_000 -> {
+                    !rgbOnly && el > 10_000 && thermal != null -> {
+                        // Plan B: solo RGB (térmica apagada), que es lo que la cámara admite siempre.
+                        rgbOnly = true
+                        log("La cámara sigue sin estar lista (${cameraDiag()}). Pruebo con solo RGB (térmica apagada)…")
+                        thermalOn = false; applyThermalView(); prepareCamera()
+                        main.postDelayed(this, 1000)
+                    }
+                    el > 22_000 -> {
                         startWait = null
-                        // El propio plan manda las fotos al dron: se arranca igual, avisando para revisarlo.
-                        log("⚠ La cámara no confirmó que esté lista (${cameraDiag()}). Arranco el plan igual: comprueba que hace fotos.")
-                        activatePlan(fp2)
+                        log("⛔ No arranco el plan: la cámara no está disponible para hacer fotos (${cameraDiag()}). " +
+                            "Si despegara, se quedaría parado en el primer punto. Reinicia la ANAFI y vuelve a subir el plan.")
                     }
                     else -> main.postDelayed(this, 500)
                 }
@@ -451,6 +460,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     override fun resumeMission() { val ok = fp?.activate(false); log(if (ok == true) "Reanudar plan ✓" else "Reanudar plan rechazado") }
     override fun pauseMission() { val ok = fp?.deactivate(); log(if (ok == true) "Pausar plan ✓" else "Pausar plan rechazado") }
     override fun stopMission() {
+        startWait?.let { main.removeCallbacks(it); log("Arranque del plan cancelado.") }; startWait = null
         fp?.deactivate()
         val ok = manual?.activate()
         log(if (ok == true) "Plan parado: el dron queda en estacionario ✓" else "Parar plan: no se pudo pasar a manual")
@@ -605,8 +615,19 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         } catch (t: Throwable) { log("Térmica: ${t.javaClass.simpleName}: ${t.message}") }
     }
 
-    private fun thermalOnMode(avail: Set<ThermalControl.Mode>) =
-        if (ThermalControl.Mode.EMBEDDED in avail) ThermalControl.Mode.EMBEDDED else ThermalControl.Mode.STANDARD
+    /**
+     * Con un plan de FOTOS la térmica va en STANDARD: en EMBEDDED ninguna cámara queda disponible para fotos
+     * (visto en vuelo: «RGB inactiva, foto UNAVAILABLE; térmica inactiva…» y el plan parado en el primer punto).
+     * Sin fotos (vista en vivo, barrido térmico, detector) EMBEDDED, que es la que trae el vídeo coloreado.
+     */
+    private fun thermalOnMode(avail: Set<ThermalControl.Mode>) = when {
+        planHasPhotos() && ThermalControl.Mode.STANDARD in avail -> ThermalControl.Mode.STANDARD
+        ThermalControl.Mode.EMBEDDED in avail -> ThermalControl.Mode.EMBEDDED
+        else -> ThermalControl.Mode.STANDARD
+    }
+
+    override val thermalColored: Boolean
+        get() = try { thermal?.mode()?.value == ThermalControl.Mode.EMBEDDED } catch (_: Throwable) { false }
 
     private class C(val p: Double, val r: Double, val g: Double, val b: Double) : ThermalControl.Palette.Color {
         override fun getPosition() = p; override fun getRed() = r; override fun getGreen() = g; override fun getBlue() = b
@@ -666,10 +687,16 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
     private fun prepareCamera() {
         thermal?.let { th ->
             // Cualquier modo encendido (EMBEDDED o STANDARD) saca foto RGB + térmica; solo hay que evitar DISABLED.
-            try { if (th.mode().value == ThermalControl.Mode.DISABLED) {
-                val m = thermalOnMode(th.mode().availableValues); th.mode().value = m; thermalOn = true
-                log("Cámara térmica activada ($m)."); applyThermalView()
-            } }
+            try {
+                val m = thermalOnMode(th.mode().availableValues)
+                val cur = th.mode().value
+                if (cur == ThermalControl.Mode.DISABLED || (planHasPhotos() && cur != m)) {
+                    th.mode().value = m; thermalOn = true
+                    log(if (planHasPhotos()) "Térmica en modo $m para las fotos (RGB + térmica). Mientras haya un plan con fotos, el vídeo térmico no lleva colores ni detector."
+                        else "Cámara térmica activada ($m).")
+                    applyThermalView()
+                }
+            }
             catch (t: Throwable) { log("No se pudo activar la térmica: ${t.message}") }
         }
         for (cam in listOfNotNull(mainCam, thermalCam)) try {

@@ -405,7 +405,7 @@ class MainActivity : Activity(), DroneLink.Listener {
     private val scanTick: Runnable = object : Runnable {
         override fun run() {
             scanHandler.postDelayed(this, 700)
-            if (scanBusy || !thermalActive()) return
+            if (scanBusy || !thermalActive() || !link.thermalColored) return
             val pr = thermalOverlay.prefs
             if (pr.mode == ThermalPaletteMode.RELATIVE) return
             scanBusy = link.captureFrame { bmp ->
