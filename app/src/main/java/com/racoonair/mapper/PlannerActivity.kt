@@ -737,7 +737,7 @@ class PlannerActivity : Activity(), MapView.Listener {
         val ov = num(fOver) ?: 0.0
         val ang = if (fAngle.text.isBlank()) null else (num(fAngle) ?: return null)
         if (listOf(alt, fr, sd, sp, ov).any { !it.isFinite() } || (ang != null && !ang.isFinite())) return null
-        val cam = (cameraSpinner.selectedItem as? Camera) ?: Camera.SEQUOIA
+        val cam = (cameraSpinner.selectedItem as? Camera) ?: Camera.DEFAULT
         val fw = if (isDisco && !Session.spec3D.type.is3D) Session.fixedWing else null
         return GridParams(alt, fr / 100.0, sd / 100.0, ang?.let { ((it % 360) + 360) % 360 }, sp.coerceIn(1.0, 12.0),
             ov.coerceIn(0.0, if (fw != null) 150.0 else 50.0), cam, fw)
@@ -764,7 +764,7 @@ class PlannerActivity : Activity(), MapView.Listener {
         if (zone.size < 3) {
             stats.text = tr("Toca el mapa para marcar las esquinas de la parcela (mínimo 3).\n") +
                 tr("Pulsación larga sobre un punto = borrarlo. Doble toque = acercar.\n\n") +
-                trf("Huella Sequoia a %1\$s m: %2\$s m · GSD %3\$s cm/px", fmt(p.altitude), "%.0f × %.0f".format(p.camera.footprint(p.altitude).first, p.camera.footprint(p.altitude).second), "%.1f".format(p.camera.gsdCm(p.altitude)))
+                trf("Huella de la cámara a %1\$s m: %2\$s m · GSD %3\$s cm/px", fmt(p.altitude), "%.0f × %.0f".format(p.camera.footprint(p.altitude).first, p.camera.footprint(p.altitude).second), "%.1f".format(p.camera.gsdCm(p.altitude)))
             map.passes = emptyList(); return
         }
         if (home == null) { stats.text = if (isDisco) tr("Falta el punto de lanzamiento (botón «Lanzam.»).") else tr("Falta la casa (punto de despegue/aterrizaje)."); map.passes = emptyList(); return }

@@ -36,7 +36,9 @@ data class Camera(
         val ANAFI_THERMAL = Camera("ANAFI_THERMAL", tr("ANAFI Thermal · RGB + térmica"), 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI, 160)
         val ANAFI_4K = Camera("ANAFI_4K", tr("ANAFI 4K / USA · RGB"), 5.92, 5.92 * 4016 / 5344, 4.04, 5344, 4016, 2.5, Platform.ANAFI)
         val ALL = listOf(SEQUOIA, ANAFI_THERMAL, ANAFI_4K)
-        fun byId(id: String?) = ALL.firstOrNull { it.id == id } ?: SEQUOIA
+        /** La cámara por defecto de esta app: Sequoia en la de Bluegrass/Disco, ANAFI Thermal en la de ANAFI. */
+        val DEFAULT get() = ALL.firstOrNull { Flavor.supports(it.platform) } ?: SEQUOIA
+        fun byId(id: String?) = ALL.firstOrNull { it.id == id && Flavor.supports(it.platform) } ?: DEFAULT
     }
     override fun toString() = name
     /** GSD térmico en cm/px (0 si no hay térmica). */
@@ -106,7 +108,7 @@ data class GridParams(
     val speed: Double = 8.0,
     /** Prolongación de cada pasada fuera del polígono, en metros. */
     val overshoot: Double = 5.0,
-    val camera: Camera = Camera.SEQUOIA,
+    val camera: Camera = Camera.DEFAULT,
     /** No nulo = plan de ala fija (Disco). */
     val fixedWing: FixedWing? = null
 )

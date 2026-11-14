@@ -54,7 +54,7 @@ object PlanStore {
             altitude = j.optDouble("altitude", 50.0), frontOverlap = j.optDouble("front", 0.8),
             sideOverlap = j.optDouble("side", 0.7), speed = j.optDouble("speed", 8.0),
             overshoot = j.optDouble("overshoot", 5.0), angleDeg = if (j.has("angle")) j.getDouble("angle") else null,
-            camera = Camera.byId(j.optString("camera", "SEQUOIA")))
+            camera = Camera.byId(j.optString("camera", Camera.DEFAULT.id)))
         val fw = j.optJSONObject("fixedWing")?.let { o ->
             FixedWing(landing = o.optJSONArray("landing")?.let { LatLon(it.getDouble(0), it.getDouble(1)) },
                 finalHeading = o.optDouble("finalHeading", 0.0), headingSet = o.optBoolean("headingSet", false),

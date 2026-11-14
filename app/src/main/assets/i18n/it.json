@@ -944,5 +944,10 @@
  "favorable.": "favorevole.",
  "precaución → ": "cautela → ",
  "sin consultar (botón «Meteo y Kp»).": "non consultata (pulsante «Meteo e Kp»).",
- "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Previsione (informativa): %1$s\nConta il vento che vedi sul campo.\n\n"
+ "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Previsione (informativa): %1$s\nConta il vento che vedi sul campo.\n\n",
+ "Calibración de la cámara térmica": "Calibrazione della camera termica",
+ "Cámara limpia y sin protector; térmica encendida unos minutos antes de volar": "Camera pulita e senza protezione; termica accesa qualche minuto prima del volo",
+ "Huella de la cámara a %1$s m: %2$s m · GSD %3$s cm/px": "Impronta della camera a %1$s m: %2$s m · GSD %3$s cm/px",
+ "Inicios/fin de captura desparejados.": "Inizi/fine di acquisizione non appaiati.",
+ "Pasadas con fotos: %1$s inicio / %2$s fin": "Passate con foto: %1$s inizio / %2$s fine"
 }

@@ -174,7 +174,7 @@ class FlightPlan private constructor(val text: String, val items: List<Item>) {
         sb.append(trf("Altura máx: %1\$s m  ·  mín WP: %2\$s m\n", "%.0f".format(maxAlt), "%.0f".format(minWaypointAlt)))
         sb.append(trf("Ruta: %1\$s m\n", "%.0f".format(pathLengthMeters)))
         sb.append(trf("Despegue: %1\$s  ·  Aterrizaje: %2\$s\n", if (hasTakeoff) "sí" else "NO", if (hasLand) "sí" else "NO"))
-        sb.append(trf("Pasadas Sequoia: %1\$s inicio / %2\$s fin", captureStarts, captureStops))
+        sb.append(trf("Pasadas con fotos: %1\$s inicio / %2\$s fin", captureStarts, captureStops))
         sequoiaTriggerMeters?.let { sb.append(trf("  ·  disparo cada %1\$s m", "%.1f".format(it))) }
         timelapseSeconds?.let { sb.append(trf("  ·  foto cada %1\$s s", "%.1f".format(it))) }
         waypoints.firstOrNull()?.let { sb.append(trf("\nPrimer WP: %1\$s, %2\$s", "%.6f".format(it.lat), "%.6f".format(it.lon))) }
@@ -188,7 +188,7 @@ class FlightPlan private constructor(val text: String, val items: List<Item>) {
         if (!hasLand) w.add(tr("El plan no termina en aterrizaje (cmd 21)."))
         if (maxAlt > 120.0) w.add(trf("Altura máxima %1\$s m: supera 120 m.", "%.0f".format(maxAlt)))
         if (waypoints.isNotEmpty() && minWaypointAlt < 10.0) w.add(tr("Hay waypoints por debajo de 10 m."))
-        if (captureStarts != captureStops) w.add(tr("Inicios/fin de captura Sequoia desparejados."))
+        if (captureStarts != captureStops) w.add(tr("Inicios/fin de captura desparejados."))
         if (items.any { it.frame != 3 && it.command in POSITIONAL }) w.add(tr("Hay ítems con frame distinto de 3 (altura relativa)."))
         return w
     }

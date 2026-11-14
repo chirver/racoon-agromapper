@@ -944,5 +944,10 @@
  "favorable.": "favourable.",
  "precaución → ": "caution → ",
  "sin consultar (botón «Meteo y Kp»).": "not checked («Weather and Kp» button).",
- "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Forecast (for information): %1$s\nThe wind you see on site is what counts.\n\n"
+ "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Forecast (for information): %1$s\nThe wind you see on site is what counts.\n\n",
+ "Calibración de la cámara térmica": "Thermal camera calibration",
+ "Cámara limpia y sin protector; térmica encendida unos minutos antes de volar": "Camera clean and without its cover; thermal on for a few minutes before flying",
+ "Huella de la cámara a %1$s m: %2$s m · GSD %3$s cm/px": "Camera footprint at %1$s m: %2$s m · GSD %3$s cm/px",
+ "Inicios/fin de captura desparejados.": "Capture start/stop commands do not match.",
+ "Pasadas con fotos: %1$s inicio / %2$s fin": "Photo passes: %1$s start / %2$s stop"
 }

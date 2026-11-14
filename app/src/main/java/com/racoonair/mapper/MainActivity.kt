@@ -933,8 +933,9 @@ class MainActivity : Activity(), DroneLink.Listener {
         }))
         pl.addView(row(button(tr("Planes guardados"), C_GREY) { pickSavedPlan() }, button(tr("Cargar fichero"), C_GREY) { pickPlan() }))
         pl.addView(row(uploadBtn))
-        pl.addView(row(button(tr("Calibración de cámara (Sequoia / térmica)"), C_GREY) { onCalibrateClicked() }))
-        pl.addView(row(button(tr("📷  Enviar el plan a la Sequoia (por WiFi)"), C_GREY) { onSequoiaClicked() }))
+        // La Sequoia solo existe en la app de Bluegrass/Disco; en la de ANAFI la calibración es la de la térmica.
+        pl.addView(row(button(if (Flavor.FIXED_WING) tr("Calibración de cámara (Sequoia / térmica)") else tr("Calibración de la cámara térmica"), C_GREY) { onCalibrateClicked() }))
+        if (Flavor.FIXED_WING) pl.addView(row(button(tr("📷  Enviar el plan a la Sequoia (por WiFi)"), C_GREY) { onSequoiaClicked() }))
         pl.addView(row(button(tr("🌤  Meteo y Kp: ¿se puede volar?"), C_BLUE) { onWeatherClicked() }))
         root.addView(pl); planCard = pl
 
@@ -1720,7 +1721,8 @@ class MainActivity : Activity(), DroneLink.Listener {
             tr("Batería del dron cargada y bien encajada"),
             if (link.platform == Platform.ANAFI) tr("Tarjeta SD de la ANAFI con espacio y gimbal libre (sin protector)")
             else tr("Sequoia encendida (luz) y con espacio en la tarjeta SD"),
-            if (calib != null) trf("Calibración de cámara hecha (%1\$s)", calib) else tr("Calibración de cámara hecha (o asumo que no la necesito)"),
+            if (link.platform == Platform.ANAFI) tr("Cámara limpia y sin protector; térmica encendida unos minutos antes de volar")
+            else if (calib != null) trf("Calibración de cámara hecha (%1\$s)", calib) else tr("Calibración de cámara hecha (o asumo que no la necesito)"),
             tr("Zona despejada, sin personas debajo, y vuelo permitido (zonas UAS / ENAIRE)"),
             tr("Viento real comprobado en el campo y mando en la mano para tomar el control")
         )

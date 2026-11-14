@@ -407,13 +407,43 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         val p = fp ?: run { log("No conectado."); return }
         telemetry.missionItem = -1
         lastMissionItem = -1
-        // La cámara debe estar en foto JPEG, sencilla, rectilínea, exposición y balance automáticos (como Pix4D).
-        val cam = activeCamera()
-        if (cam == null || !cam.canStartPhotoCapture()) {
-            prepareCamera()
-            log("La cámara aún no está lista para fotos; la estoy configurando. Pulsa INICIAR otra vez en unos segundos.")
-            return
+        startWait?.let { main.removeCallbacks(it) }; startWait = null
+        // Sin fotos en el plan (p. ej. barrido térmico) la cámara da igual.
+        if (!planHasPhotos() || cameraReady()) { activatePlan(p); return }
+        // Antes el usuario tenía que volver a pulsar INICIAR (y volvía a salir la lista: bucle).
+        // Ahora se configura la cámara y el plan arranca SOLO en cuanto esté lista.
+        prepareCamera()
+        log("Preparando la cámara para las fotos… el plan arrancará solo en unos segundos.")
+        val t0 = System.currentTimeMillis()
+        val r = object : Runnable {
+            override fun run() {
+                val fp2 = fp ?: run { startWait = null; return }
+                when {
+                    cameraReady() -> { startWait = null; activatePlan(fp2) }
+                    System.currentTimeMillis() - t0 > 12_000 -> {
+                        startWait = null
+                        // El propio plan manda las fotos al dron: se arranca igual, avisando para revisarlo.
+                        log("⚠ La cámara no confirmó que esté lista (${cameraDiag()}). Arranco el plan igual: comprueba que hace fotos.")
+                        activatePlan(fp2)
+                    }
+                    else -> main.postDelayed(this, 500)
+                }
+            }
         }
+        startWait = r
+        main.postDelayed(r, 800)
+    }
+
+    private var startWait: Runnable? = null
+
+    private fun cameraReady(): Boolean =
+        listOfNotNull(activeCamera(), mainCam, thermalCam).any { c -> try { c.isActive && c.canStartPhotoCapture() } catch (_: Throwable) { false } }
+
+    private fun cameraDiag(): String = listOfNotNull(mainCam?.let { "RGB" to it }, thermalCam?.let { "térmica" to it }).joinToString("; ") { (n, c) ->
+        try { "$n: ${if (c.isActive) "activa" else "inactiva"}, modo ${c.mode().value}, foto ${c.photoState().get()}" } catch (t: Throwable) { "$n: ?" }
+    }.ifEmpty { "sin cámara" }
+
+    private fun activatePlan(p: FlightPlanPilotingItf) {
         val ok = p.activate(true)
         log(if (ok) "INICIAR plan ✓" else "INICIAR plan rechazado por el dron" + p.unavailabilityReasons.let { if (it.isEmpty()) "" else " ($it)" })
     }
@@ -621,7 +651,7 @@ class AnafiLink(private val ctx: Context, override var listener: DroneLink.Liste
         log(if (on) "Enlace perdido → volver a casa ✓" else "Enlace perdido → seguir el plan ✓")
     }
     override fun cameraCalibration() {
-        val th = thermal ?: run { log("Calibración: este dron no tiene cámara térmica (la radiométrica es solo de la Sequoia)."); return }
+        val th = thermal ?: run { log("Calibración: este dron no tiene cámara térmica."); return }
         try {
             val ok = th.calibration()?.calibrate() ?: false
             log(if (ok) "Calibración del sensor térmico lanzada (el obturador hace clic) ✓" else "El dron no aceptó la calibración térmica")
