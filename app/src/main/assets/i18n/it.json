@@ -934,5 +934,15 @@
  "preparado": "pronto",
  "⛔ No se puede iniciar": "⛔ Impossibile avviare",
  "✘ REQUIERE CALIBRACIÓN": "✘ RICHIEDE CALIBRAZIONE",
- "✘ sin calibrar": "✘ non calibrato"
+ "✘ sin calibrar": "✘ non calibrato",
+ " (según la previsión)": " (secondo la previsione)",
+ " Es la previsión: si en el campo el viento va de cara a la final, puedes seguir.": " È la previsione: se sul campo il vento è frontale nel finale, puoi continuare.",
+ "(Bluegrass 8 m/s, Disco 12 m/s, ANAFI 14 m/s); el resto son criterios prudentes de la app. ": "(Bluegrass 8 m/s, Disco 12 m/s, ANAFI 14 m/s); il resto sono criteri prudenti dell'app. ",
+ "Es solo informativa: nunca impide volar, porque a veces no coincide con lo que hay en el campo.": "È solo informativa: non impedisce mai di volare, perché a volte non corrisponde alle condizioni sul campo.",
+ "Viento real comprobado en el campo y mando en la mano para tomar el control": "Vento reale verificato sul campo e radiocomando in mano per prendere il controllo",
+ "desfavorable → ": "sfavorevole → ",
+ "favorable.": "favorevole.",
+ "precaución → ": "cautela → ",
+ "sin consultar (botón «Meteo y Kp»).": "non consultata (pulsante «Meteo e Kp»).",
+ "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Previsione (informativa): %1$s\nConta il vento che vedi sul campo.\n\n"
 }

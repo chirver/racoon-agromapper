@@ -774,7 +774,7 @@ class PlannerActivity : Activity(), MapView.Listener {
             result = r
             map.passes = r.passes
             val w = ArrayList(r.warnings()); val bl = ArrayList(r.blockers())
-            (r as? GridResult)?.fw?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { if (it.startsWith("⛔")) bl.add(0, it.removePrefix("⛔ ")) else w.add(0, it) } }
+            (r as? GridResult)?.fw?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { w.add(0, it.removePrefix("⛔ ").removePrefix("⚠ ") + tr(" (según la previsión)")) } }
             blockersShown = bl
             stats.text = r.summary() + (if (bl.isEmpty()) "" else "\n⛔ " + bl.joinToString("\n⛔ ")) +
                 (if (w.isEmpty()) "" else "\n⚠ " + w.joinToString("\n⚠ "))

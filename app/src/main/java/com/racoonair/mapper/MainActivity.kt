@@ -1322,12 +1322,10 @@ class MainActivity : Activity(), DroneLink.Listener {
             msg.append(if (System.currentTimeMillis() - Session.sequoiaArmedAt < 30 * 60_000) tr("• Sequoia preparada ✔\n")
                        else tr("• ⚠ La Sequoia NO está preparada: «Enviar el plan a la Sequoia».\n"))
         val wind = finalWindNote(p)
-        if (wind.startsWith("⛔")) {
-            AlertDialog.Builder(this).setTitle(tr("⛔ Viento de cola en la final"))
-                .setMessage(wind + tr("\n\nCon viento de cola la Disco aterrizaría demasiado rápida y larga. Rehaz el aterrizaje en el planificador."))
-                .setPositiveButton(tr("Entendido"), null).show(); return
-        }
-        msg.append("• ").append(wind).append('\n')
+        // La previsión no manda: avisa, pero el piloto decide con el viento que ve en el campo.
+        if (wind.startsWith("⛔")) msg.append("• ⚠ ").append(wind.removePrefix("⛔ "))
+            .append(tr(" Es la previsión: si en el campo el viento va de cara a la final, puedes seguir.")).append('\n')
+        else msg.append("• ").append(wind).append('\n')
         msg.append(tr("\nSi algo va mal en la final: «Volver a casa» o toma el control con el SkyController."))
         AlertDialog.Builder(this).setTitle(tr("✈ Plan para la Disco"))
             .setMessage(msg.toString())
@@ -1551,7 +1549,8 @@ class MainActivity : Activity(), DroneLink.Listener {
         sb.append(if (idx != null) trf("\nPrimera ventana buena: desde %1\$s.\n", verdicts[idx].first.label) else tr("\nNo hay 2 horas seguidas en verde en las próximas 12 h.\n"))
         if (r.kpError != null) sb.append(trf("\n(Kp: no se pudo consultar a la NOAA: %1\$s)\n", r.kpError))
         sb.append(tr("\nFuentes: Open-Meteo (previsión), NOAA SWPC (Kp). Viento máximo según manual Parrot ") +
-            tr("(Bluegrass 8 m/s, Disco 12 m/s); el resto son criterios prudentes de la app. La previsión no sustituye a mirar el cielo."))
+            tr("(Bluegrass 8 m/s, Disco 12 m/s, ANAFI 14 m/s); el resto son criterios prudentes de la app. ") +
+            tr("Es solo informativa: nunca impide volar, porque a veces no coincide con lo que hay en el campo."))
         val b = AlertDialog.Builder(this).setTitle(trf("%1\$s Meteo: %2\$s", v0.icon, v0.word))
             .setMessage(sb.toString())
             .setPositiveButton("OK", null)
@@ -1699,15 +1698,18 @@ class MainActivity : Activity(), DroneLink.Listener {
         val place = dronePos(t) ?: p.homePoint?.let { LatLon(it.lat, it.lon) } ?: p.waypoints.firstOrNull()?.let { LatLon(it.lat, it.lon) }
         val wv = if (wr != null && place != null && System.currentTimeMillis() - wr.fetchedAt < 60 * 60_000 &&
             GridPlanner.distance(place, LatLon(wr.lat, wr.lon)) < 5000) weatherVerdictNow(wr, airframeNow()) else null
-        when {
-            wv == null -> issues.add(tr("Meteo no comprobada (botón «Meteo y Kp»)."))
-            wv.second.level == 2 -> issues.add(tr("METEO: NO VOLAR → ") + wv.second.reasons.filter { it.startsWith("⛔") }.joinToString(" ") { it.removePrefix("⛔ ") })
-            wv.second.level == 1 -> issues.add(tr("Meteo: precaución → ") + wv.second.reasons.filter { it.startsWith("⚠") }.joinToString(" ") { it.removePrefix("⚠ ") })
+        // La previsión es solo informativa: no cuenta como aviso ni impide volar (a veces no coincide con el campo).
+        val meteoNote = when {
+            wv == null -> tr("sin consultar (botón «Meteo y Kp»).")
+            wv.second.level == 2 -> tr("desfavorable → ") + wv.second.reasons.filter { it.startsWith("⛔") }.joinToString(" ") { it.removePrefix("⛔ ") }
+            wv.second.level == 1 -> tr("precaución → ") + wv.second.reasons.filter { it.startsWith("⚠") }.joinToString(" ") { it.removePrefix("⚠ ") }
+            else -> tr("favorable.")
         }
 
         val msg = StringBuilder()
         msg.append(trf("Plan: %1\$s\n%2\$s\n\n", planName, p.summary()))
         if (issues.isEmpty()) msg.append(tr("✔ Sin avisos.\n\n")) else msg.append(trf("AVISOS:\n• %1\$s\n\n", issues.joinToString("\n• ")))
+        msg.append(trf("🌤 Previsión (informativa): %1\$s\nManda el viento que veas en el campo.\n\n", meteoNote))
         msg.append(if (t.droneModel == 2) tr("La Disco ya está en el aire: al iniciar dejará los círculos e irá a la primera pasada. Marca todo para poder volar:")
                    else tr("Si el dron está en tierra, DESPEGARÁ solo. Marca todo para poder volar:"))
 
@@ -1720,7 +1722,7 @@ class MainActivity : Activity(), DroneLink.Listener {
             else tr("Sequoia encendida (luz) y con espacio en la tarjeta SD"),
             if (calib != null) trf("Calibración de cámara hecha (%1\$s)", calib) else tr("Calibración de cámara hecha (o asumo que no la necesito)"),
             tr("Zona despejada, sin personas debajo, y vuelo permitido (zonas UAS / ENAIRE)"),
-            tr("Viento aceptable y SkyController en la mano para tomar el control")
+            tr("Viento real comprobado en el campo y mando en la mano para tomar el control")
         )
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         box.addView(TextView(this).apply { text = msg.toString(); textSize = 14f; setPadding(0, 0, 0, dp(8)) })

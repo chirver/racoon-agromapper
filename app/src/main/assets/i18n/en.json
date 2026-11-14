@@ -934,5 +934,15 @@
  "preparado": "ready",
  "⛔ No se puede iniciar": "⛔ Cannot start",
  "✘ REQUIERE CALIBRACIÓN": "✘ NEEDS CALIBRATION",
- "✘ sin calibrar": "✘ not calibrated"
+ "✘ sin calibrar": "✘ not calibrated",
+ " (según la previsión)": " (according to the forecast)",
+ " Es la previsión: si en el campo el viento va de cara a la final, puedes seguir.": " This is the forecast: if on site the wind is head-on to the final, you can continue.",
+ "(Bluegrass 8 m/s, Disco 12 m/s, ANAFI 14 m/s); el resto son criterios prudentes de la app. ": "(Bluegrass 8 m/s, Disco 12 m/s, ANAFI 14 m/s); the rest are the app's cautious criteria. ",
+ "Es solo informativa: nunca impide volar, porque a veces no coincide con lo que hay en el campo.": "It is for information only: it never prevents flying, because it sometimes does not match conditions on site.",
+ "Viento real comprobado en el campo y mando en la mano para tomar el control": "Actual wind checked on site and controller in hand to take over",
+ "desfavorable → ": "unfavourable → ",
+ "favorable.": "favourable.",
+ "precaución → ": "caution → ",
+ "sin consultar (botón «Meteo y Kp»).": "not checked («Weather and Kp» button).",
+ "🌤 Previsión (informativa): %1$s\nManda el viento que veas en el campo.\n\n": "🌤 Forecast (for information): %1$s\nThe wind you see on site is what counts.\n\n"
 }
