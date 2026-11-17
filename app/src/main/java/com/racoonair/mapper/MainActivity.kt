@@ -936,6 +936,7 @@ class MainActivity : Activity(), DroneLink.Listener {
         // La Sequoia solo existe en la app de Bluegrass/Disco; en la de ANAFI la calibración es la de la térmica.
         pl.addView(row(button(if (Flavor.FIXED_WING) tr("Calibración de cámara (Sequoia / térmica)") else tr("Calibración de la cámara térmica"), C_GREY) { onCalibrateClicked() }))
         if (Flavor.FIXED_WING) pl.addView(row(button(tr("📷  Enviar el plan a la Sequoia (por WiFi)"), C_GREY) { onSequoiaClicked() }))
+        if (Flavor.FIXED_WING) pl.addView(row(button(tr("🌱  Prueba de NDVI en vivo (Sequoia)"), C_GREY) { onLiveNdviTest() }))
         pl.addView(row(button(tr("🌤  Meteo y Kp: ¿se puede volar?"), C_BLUE) { onWeatherClicked() }))
         root.addView(pl); planCard = pl
 
@@ -1811,14 +1812,119 @@ class MainActivity : Activity(), DroneLink.Listener {
                 .show()
             return
         }
+        sequoiaCalibration(false)
+    }
+
+    /**
+     * Procedimiento de Pix4Dcapture: panel nivelado con la parte de arriba al norte → dron sujeto a 50 cm o más →
+     * cuenta atrás de 10 s → la Sequoia hace las fotos del panel y las guarda en su tarjeta.
+     * Con [liveTest] además se espera la imagen de vista en vivo para probar el NDVI en tierra.
+     */
+    private fun sequoiaCalibration(liveTest: Boolean) {
         AlertDialog.Builder(this)
-            .setTitle(tr("Calibración radiométrica (Sequoia)"))
-            .setMessage(tr("1. Coloca el panel de calibración en el suelo, a pleno sol y sin sombras.\n") +
-                tr("2. Sujeta el dron (o la Sequoia) a ~1 m por encima, con la cámara apuntando al panel y sin tapar el sensor de luz superior.\n") +
-                tr("3. Pulsa CALIBRAR y no te muevas hasta que salga el resultado."))
+            .setTitle(tr("Calibración radiométrica (Sequoia) · 1/2"))
+            .setMessage(tr("Pon el panel de reflectancia en una superficie completamente plana (usa el nivel de burbuja del panel). ") +
+                tr("La parte de arriba del panel debe apuntar al norte. Que no haya ninguna sombra sobre el panel."))
             .setNegativeButton(tr("Cancelar"), null)
-            .setPositiveButton("CALIBRAR") { _, _ -> lastCalibResult = -1; calibRequested = true; link.cameraCalibration() }
-            .show()
+            .setPositiveButton(tr("Siguiente")) { _, _ ->
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Calibración radiométrica (Sequoia) · 2/2"))
+                    .setMessage(tr("Sujeta el dron con la Sequoia apuntando al panel, a 50 cm o más, y con el sensor de sol de arriba despejado. ") +
+                        tr("Sin sombras sobre el sensor ni sobre el panel.\n\nAl pulsar EMPEZAR tienes 10 segundos antes de que empiece: luego no te muevas."))
+                    .setNegativeButton(tr("Cancelar"), null)
+                    .setPositiveButton(tr("EMPEZAR")) { _, _ -> calibrationCountdown(liveTest) }
+                    .show()
+            }.show()
+    }
+
+    private fun calibrationCountdown(liveTest: Boolean) {
+        val num = label(64f).apply { gravity = Gravity.CENTER; setPadding(0, dp(16), 0, dp(16)); text = "10" }
+        var left = 10
+        var cancelled = false
+        val d = AlertDialog.Builder(this).setTitle(tr("La calibración empieza en…")).setView(num)
+            .setNegativeButton(tr("Cancelar")) { _, _ -> cancelled = true }.setCancelable(false).show()
+        val h = android.os.Handler(mainLooper)
+        val tick = object : Runnable {
+            override fun run() {
+                if (cancelled) return
+                left--
+                if (left > 0) { num.text = "$left"; h.postDelayed(this, 1000); return }
+                d.dismiss()
+                lastCalibResult = -1; calibRequested = true
+                if (liveTest) { liveTestUntil = System.currentTimeMillis() + 90_000; liveShown = link.liveLast }
+                link.cameraCalibration()
+                onLog(tr("Calibrando… no muevas el dron hasta el resultado."))
+            }
+        }
+        h.postDelayed(tick, 1000)
+    }
+
+    // ------------------------------------------------------------------ prueba de NDVI en vivo (Sequoia)
+
+    private var liveTestUntil = 0L
+    private var liveShown: LiveNdvi.Result? = null
+
+    private fun onLiveNdviTest() {
+        if (!link.isConnected) { onLog(tr("Conecta primero con el dron.")); return }
+        AlertDialog.Builder(this).setTitle(tr("🌱 Prueba de NDVI en vivo"))
+            .setMessage(tr("Prueba en tierra de la vista en vivo de la Sequoia (la que usan Pix4Dfields/ParrotFields):\n\n") +
+                tr("1. La app abre una sesión nueva en la Sequoia y le pide las bandas rojo + infrarrojo.\n") +
+                tr("2. Haces la calibración radiométrica con el panel, como siempre.\n") +
+                tr("3. Si la Sequoia publica esa foto en la vista en vivo, la app la baja y calcula el NDVI.\n\n") +
+                tr("Si no llega ninguna imagen, la foto de calibración no sirve para esto y habrá que probarlo en un vuelo corto con un plan: la app ya queda preparada. ") +
+                tr("Todo queda en el registro (Diagnóstico)."))
+            .setNegativeButton(tr("Cancelar"), null)
+            .setPositiveButton(tr("Empezar")) { _, _ ->
+                link.liveNdviStart()
+                android.os.Handler(mainLooper).postDelayed({ sequoiaCalibration(true) }, 1500)
+            }.show()
+    }
+
+    private fun checkLiveNdvi() {
+        val r = link.liveLast ?: run {
+            if (liveTestUntil > 0 && System.currentTimeMillis() > liveTestUntil) {
+                liveTestUntil = 0
+                onLog(tr("Vista en vivo: en 90 s no llegó ninguna imagen tras la calibración. Toca probarlo en vuelo con un plan corto."))
+            }
+            return
+        }
+        if (r === liveShown) return
+        liveShown = r
+        if (liveTestUntil == 0L && !link.telemetry.planPlaying) return
+        liveTestUntil = 0
+        showLiveNdvi(r)
+    }
+
+    private fun showLiveNdvi(r: LiveNdvi.Result) {
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), 0) }
+        r.png?.let { f -> box.addView(android.widget.ImageView(this).apply {
+            setImageBitmap(android.graphics.BitmapFactory.decodeFile(f.absolutePath)); adjustViewBounds = true
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220))) }
+        box.addView(label(12f).apply {
+            text = (r.ndviMean()?.let { trf("NDVI medio %1\$s (rojo = suelo · verde = vegetación)\n", "%.2f".format(it)) } ?: tr("Sin NDVI: la imagen no trae las dos bandas.\n")) + r.info
+        })
+        AlertDialog.Builder(this).setTitle(tr("🌱 NDVI en vivo")).setView(box)
+            .setNegativeButton(tr("Compartir")) { _, _ ->
+                val files = listOfNotNull(r.png, r.png?.let { java.io.File(it.parentFile, it.name.removeSuffix("_ndvi.png") + ".tif") }).filter { it.exists() }
+                try {
+                    // Copia a Descargas/RacoonMapper (MediaStore) para poder compartirlas sin FileProvider.
+                    val uris = ArrayList(files.mapNotNull { f ->
+                        if (android.os.Build.VERSION.SDK_INT < 29) null else {
+                            val v = android.content.ContentValues().apply {
+                                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, f.parentFile?.name + "_" + f.name)
+                                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, if (f.name.endsWith(".png")) "image/png" else "image/tiff")
+                                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/RacoonMapper")
+                            }
+                            contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v)?.also { u ->
+                                contentResolver.openOutputStream(u)?.use { o -> f.inputStream().use { it.copyTo(o) } } }
+                        }
+                    })
+                    if (uris.isEmpty()) throw IllegalStateException()
+                    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND_MULTIPLE).setType("*/*")
+                        .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), tr("Compartir")))
+                } catch (e: Exception) { onLog(trf("Las imágenes están en %1\$s", link.liveDir?.absolutePath)) }
+            }
+            .setPositiveButton("OK", null).show()
     }
 
     /** Un doble toque en VOLAR caía en «Pausar» justo debajo (visto en vuelo real): se ignora 2 s tras iniciar. */
@@ -1903,6 +2009,7 @@ class MainActivity : Activity(), DroneLink.Listener {
                 Toast.makeText(this, tr("Calibración radiométrica OK"), Toast.LENGTH_LONG).show()
             } else Toast.makeText(this, tr("La calibración radiométrica FALLÓ: repítela"), Toast.LENGTH_LONG).show()
         }
+        checkLiveNdvi()
         FlightRecorder.update(applicationContext, t, planName)
         // Cronómetro real de la misión (despegue → aterrizaje) para calibrar la estimación.
         if (Session.missionStartedAt > 0) {

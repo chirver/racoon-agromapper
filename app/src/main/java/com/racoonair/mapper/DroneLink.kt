@@ -29,6 +29,7 @@ import com.parrot.arsdk.arcontroller.ARFeatureSequoiaCam
 import com.parrot.arsdk.ardatatransfer.ARDATATRANSFER_ERROR_ENUM
 import com.parrot.arsdk.ardatatransfer.ARDATATRANSFER_UPLOADER_RESUME_ENUM
 import com.parrot.arsdk.ardatatransfer.ARDataTransferManager
+import com.parrot.arsdk.arcommands.ARCommand
 import com.parrot.arsdk.ardatatransfer.ARDataTransferUploaderCompletionListener
 import com.parrot.arsdk.ardatatransfer.ARDataTransferUploaderProgressListener
 import com.parrot.arsdk.ardiscovery.ARDISCOVERY_ERROR_ENUM
@@ -205,6 +206,7 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED",
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED",
             "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED",
+            "ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHPICTURESINPROGRESSNUMBERCHANGED",
             "ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES",
             "ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_MASSSTORAGECONTENT")
         private val NAV_HOME_REASON = arrayOf(tr("pedido por el usuario"), tr("enlace perdido"), tr("BATERÍA BAJA"), tr("terminado"), tr("detenido"), tr("desactivado por el dron"), tr("activado por el dron"))
@@ -414,7 +416,85 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
         val sc = controller?.featureSequoiaCam
         if (sc == null) { log(tr("La Sequoia no está disponible en este dron/conexión.")); return }
         telemetry.radioCalibResult = -1
-        check(tr("Calibración radiométrica"), sc.sendRadiometricCalibStart(0.toByte()))
+        check(tr("Calibración radiométrica"), sc.sendRadiometricCalibStart(sequoiaId.toByte()))
+    }
+
+    // ---------------------------------------------------------------- NDVI en vivo (live stitch de la Sequoia)
+
+    @Volatile private var sequoiaId = 0
+    @Volatile private var livePath: String? = null
+    private var liveSession = "sesion"
+    private var lastLiveId = -1
+    @Volatile private var liveResult: LiveNdvi.Result? = null
+    private val liveExec = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    override val liveDir: File get() = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "ndvi_vivo")
+    override val liveLast: LiveNdvi.Result? get() = liveResult
+
+    /** Abre una sesión en la Sequoia: crea carpeta nueva en su tarjeta y deja disponible la vista en vivo. */
+    override fun liveNdviStart() {
+        val sc = controller?.featureSequoiaCam
+        if (sc == null) { log(tr("La Sequoia no está disponible en este dron/conexión.")); return }
+        val name = "racoon_" + java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(java.util.Date())
+        log(trf("Vista en vivo: abriendo sesión «%1\$s» en la Sequoia (id %2\$s)…", name, sequoiaId))
+        check(tr("Abrir sesión de la Sequoia"), sc.sendOpenSession(sequoiaId.toByte(), name))
+    }
+
+    /** El dron avisa de la última imagen lista: se bajan todas las que falten (00001.tif, 00002.tif…), como Pix4D. */
+    private fun onLivePicture(id: Int) {
+        val path = livePath
+        log(trf("Vista en vivo: última imagen lista nº %1\$s", id))
+        if (path == null) { log(tr("Vista en vivo: no hay sesión abierta con ruta; no se descarga.")); return }
+        if (lastLiveId < 0) lastLiveId = id - 1   // al abrir la sesión: solo lo nuevo
+        val t = telemetry
+        val pos = Triple(t.lat, t.lon, t.altitude); val yaw = t.yawDeg
+        while (lastLiveId < id) {
+            lastLiveId++
+            val name = String.format(java.util.Locale.ROOT, "%05d.tif", lastLiveId)
+            val dir = File(liveDir, liveSession).apply { mkdirs() }
+            liveExec.execute { downloadLive(path, name, dir, pos, yaw) }
+        }
+    }
+
+    private fun downloadLive(remoteDir: String, name: String, dir: File, pos: Triple<Double, Double, Double>, yaw: Double) {
+        val m = mode
+        val port = if (m == Mode.SKYCONTROLLER2_WIFI) ARUtilsManager.FTP_GENERIC_SKY else ARUtilsManager.FTP_GENERIC
+        val ftp = ARUtilsManager(); val dt = ARDataTransferManager()
+        val local = File(dir, name)
+        val t0 = System.currentTimeMillis()
+        try {
+            val e = if (m.usb) {
+                val mux = UsbMux.mux ?: throw IllegalStateException(tr("canal USB cerrado"))
+                val ref = mux.newMuxRef()
+                try { ftp.initWifiFtp(ref, "drone", port, ARUtilsManager.FTP_ANONYMOUS, "") } finally { ref.release() }
+            } else ftp.initWifiFtp(m.ip, port, ARUtilsManager.FTP_ANONYMOUS, "")
+            if (e != ARUTILS_ERROR_ENUM.ARUTILS_OK) { log(trf("Vista en vivo: FTP no disponible (%1\$s)", e)); return }
+            val result = java.util.concurrent.atomic.AtomicReference<ARDATATRANSFER_ERROR_ENUM?>(null)
+            val dl = dt.arDataTransferDownloader
+            val remote = remoteDir.trimEnd('/') + "/" + name
+            dl.createDownloader(ftp, remote, local.absolutePath, null, null,
+                com.parrot.arsdk.ardatatransfer.ARDataTransferDownloaderCompletionListener { _, r -> result.set(r) }, null,
+                com.parrot.arsdk.ardatatransfer.ARDATATRANSFER_DOWNLOADER_RESUME_ENUM.ARDATATRANSFER_DOWNLOADER_RESUME_FALSE)
+            val th = Thread(dl.downloaderRunnable); th.start(); th.join(30_000)
+            if (th.isAlive) { dl.cancelThread(); th.join() }
+            dl.dispose()
+            try { ftp.closeWifiFtp() } catch (_: Throwable) {}
+            if (result.get() != ARDATATRANSFER_ERROR_ENUM.ARDATATRANSFER_OK || !local.exists() || local.length() == 0L) {
+                log(trf("Vista en vivo: no se pudo bajar %1\$s de %2\$s (%3\$s)", name, remote, result.get())); return
+            }
+            File(dir, "posiciones.csv").appendText(String.format(java.util.Locale.ROOT, "%s;%.7f;%.7f;%.1f;%.1f;%d\n",
+                name, pos.first, pos.second, pos.third, yaw, System.currentTimeMillis()))
+            val r = LiveNdvi.process(local)
+            liveResult = r
+            log(trf("Vista en vivo: %1\$s bajada en %2\$s s · %3\$s", name, "%.1f".format((System.currentTimeMillis() - t0) / 1000.0), r.info) +
+                (r.ndviMean()?.let { trf(" · NDVI medio %1\$s", "%.2f".format(it)) } ?: tr(" · sin NDVI (hacen falta 2 bandas)")))
+            main.post { listener.onTelemetry(telemetry) }
+        } catch (t: Throwable) {
+            log(trf("Vista en vivo: %1\$s: %2\$s", t.javaClass.simpleName, t.message))
+        } finally {
+            try { dt.dispose() } catch (_: Throwable) {}
+            try { ftp.dispose() } catch (_: Throwable) {}
+        }
     }
     override fun land() = check(tr("Aterrizar"), d3()?.sendPilotingLanding())
     override fun emergency() = check(tr("EMERGENCIA (corte de motores)"), d3()?.sendPilotingEmergency())
@@ -608,6 +688,19 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                 ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBSTATUS_VALUE),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT to listOf(
                 ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT_VALUE),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED to listOf(
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_CAM_ID,
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_STATE,
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_SESSION_PATH,
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_LIVE_STITCH_PATH),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED to listOf(
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED_CAM_ID,
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED_MASK),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED to listOf(
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED_CAM_ID,
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED_PICTURE_ID),
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHPICTURESINPROGRESSNUMBERCHANGED to listOf(
+                ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHPICTURESINPROGRESSNUMBERCHANGED_NB_PICTURES),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALERTSTATECHANGED to listOf(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ALERTSTATECHANGED_STATE),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_WINDSTATECHANGED to listOf(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_WINDSTATECHANGED_STATE),
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_RETURNHOMEBATTERYCAPACITY to listOf(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_RETURNHOMEBATTERYCAPACITY_STATUS),
@@ -729,6 +822,9 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     val fw = e[ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES_SWVERSION]
                     tn + (if (fw != null && fw.toString().isNotBlank()) trf(" · fw %1\$s", fw) else "")
                 }
+                // Id de la Sequoia para sus órdenes (Pix4D lo toma de aquí; antes se suponía 0).
+                all.firstOrNull { (it[ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES_ACCESSORY_TYPE]?.toString()?.toIntOrNull() ?: 0) == 0 }
+                    ?.let { num(it, ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_ACCESSORYSTATE_CONNECTEDACCESSORIES_ID)?.toInt() }?.let { sequoiaId = it }
                 if (txt != t.accessories) log(trf("Accesorios que ve el dron: %1\$s", txt.ifEmpty { "ninguno" }))
                 t.accessories = txt
                 if (txt.contains("Sequoia")) t.sequoiaSeen = true
@@ -740,6 +836,35 @@ class DroneLink(private val ctx: Context, @Volatile override var listener: Liste
                     if (it != t.radioCalibStatus) log(tr("Calibración Sequoia: ") + arrayOf("disponible", tr("no disponible"), tr("EN CURSO…")).getOrElse(it) { "estado $it" })
                     t.radioCalibStatus = it
                 }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED -> for (e in all) {
+                val st0 = num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_STATE)?.toInt()
+                val opened = com.parrot.arsdk.arcommands.ARCOMMANDS_SEQUOIA_CAM_SESSION_STATUS_VALUE_ENUM.OPENED.value
+                val st = if (st0 == opened) 0 else 1
+                val sp = e[ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_SESSION_PATH]?.toString() ?: ""
+                val lp = e[ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_SESSIONSTATECHANGED_LIVE_STITCH_PATH]?.toString() ?: ""
+                log(trf("Sequoia: sesión %1\$s · carpeta %2\$s · vista en vivo %3\$s", if (st == 0) tr("ABIERTA") else tr("cerrada"), sp.ifEmpty { "—" }, lp.ifEmpty { "—" }))
+                if (st == 0 && lp.isNotEmpty()) {
+                    // Como Pix4D: la ruta llega como URI; lo que cuenta es su parte de ruta.
+                    livePath = try { java.net.URI.create(lp).path ?: lp } catch (_: Throwable) { lp }
+                    liveSession = sp.substringAfterLast('/').ifEmpty { "sesion" }
+                    lastLiveId = -1
+                    // Bandas para el NDVI: rojo + infrarrojo cercano (igual que Pix4D/ParrotFields).
+                    try {
+                        val mask = ARCommand.ARCOMMANDS_FLAG_SEQUOIA_CAM_SENSOR_VALUE_RED or ARCommand.ARCOMMANDS_FLAG_SEQUOIA_CAM_SENSOR_VALUE_NEAR_INFRA_RED
+                        check(tr("Vista en vivo: bandas rojo + NIR"), controller?.featureSequoiaCam?.sendSetLiveStitchMask(sequoiaId.toByte(), mask.toByte()))
+                    } catch (t: Throwable) { log(trf("Vista en vivo: %1\$s", t.message)) }
+                } else if (st != 0) livePath = null
+            }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED ->
+                for (e in all) num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHMASKCHANGED_MASK)?.toInt()?.let {
+                    log(trf("Vista en vivo: máscara de bandas = %1\$s (%2\$s)", it, if (it == 0) tr("apagada") else tr("activa")))
+                }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHPICTURESINPROGRESSNUMBERCHANGED ->
+                for (e in all) num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHPICTURESINPROGRESSNUMBERCHANGED_NB_PICTURES)?.toInt()?.let {
+                    log(trf("Vista en vivo: %1\$s imagen(es) en preparación", it))
+                }
+            ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED ->
+                for (e in all) num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_LIVESTITCHLASTPICTUREIDCHANGED_PICTURE_ID)?.toInt()?.let { onLivePicture(it) }
             ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT -> {
                 for (e in all) num(e, ARFeatureSequoiaCam.ARCONTROLLER_DICTIONARY_KEY_SEQUOIA_CAM_RADIOMETRICCALIBRESULT_VALUE)?.toInt()?.let {
                     t.radioCalibResult = it

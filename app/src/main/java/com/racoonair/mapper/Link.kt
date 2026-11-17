@@ -33,6 +33,12 @@ interface Link {
     fun setReturnHomeOnDisconnect(on: Boolean)
     /** Sequoia: calibración radiométrica. ANAFI Thermal: calibración del sensor térmico. */
     fun cameraCalibration()
+    /** Prueba de NDVI en vivo (Sequoia en Bluegrass): abre una sesión y pide las bandas rojo + NIR. */
+    fun liveNdviStart() {}
+    /** Carpeta donde se guardan las imágenes en vivo y su NDVI. */
+    val liveDir: java.io.File? get() = null
+    /** Último NDVI en vivo procesado (para verlo en pantalla). */
+    val liveLast: LiveNdvi.Result? get() = null
 
     /** Vídeo en directo: el enlace entrega los fotogramas a [videoSink] mientras esté activado. */
     val supportsVideo: Boolean
