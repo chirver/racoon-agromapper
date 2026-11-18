@@ -992,5 +992,20 @@
  "cerrada": "fermée",
  "🌱  Prueba de NDVI en vivo (Sequoia)": "🌱  Test NDVI en direct (Sequoia)",
  "🌱 NDVI en vivo": "🌱 NDVI en direct",
- "🌱 Prueba de NDVI en vivo": "🌱 Test NDVI en direct"
+ "🌱 Prueba de NDVI en vivo": "🌱 Test NDVI en direct",
+ "\nDisco: fija también el lanzamiento y el aterrizaje (🛬), como en los mapas.": "\nDisco : fixez aussi le lancement et l'atterrissage (🛬), comme pour les cartes.",
+ "Altura muy baja (<20 m): cuidado con árboles y cables en toda la ruta.": "Altitude très basse (<20 m) : attention aux arbres et câbles sur tout le trajet.",
+ "DISCO · Ruta por waypoints\n%d puntos · altura %.0f m · crucero %.1f m/s\nRecorrido %.0f m (con la final) · tiempo estimado %.1f min\n%s": "DISCO · Route par waypoints\n%d points · altitude %.0f m · croisière %.1f m/s\nParcours %.0f m (avec la finale) · durée estimée %.1f min\n%s",
+ "Demasiados puntos (máx. 200).": "Trop de points (max. 200).",
+ "El punto más lejano está a %1$s m: mantén el dron a la vista (VLOS).": "Le point le plus éloigné est à %1$s m : gardez le drone en vue (VLOS).",
+ "En los giros la Disco se abre hasta ~%1$s m fuera de la ruta: que no haya obstáculos alrededor.": "Dans les virages la Disco s'écarte jusqu'à ~%1$s m de la route : aucun obstacle autour.",
+ "Hay puntos a menos de %1$s m entre sí: la Disco los pasará de largo y girará en círculo para alcanzarlos.": "Des points sont à moins de %1$s m : la Disco les dépassera et tournera pour les atteindre.",
+ "La ruta no esquiva obstáculos: revísala en la ortofoto.": "La route n'évite pas les obstacles : vérifiez-la sur l'orthophoto.",
+ "Marca al menos 2 puntos de ruta.": "Marquez au moins 2 points de route.",
+ "Pulsación larga sobre un punto = borrarlo.": "Appui long sur un point = le supprimer.",
+ "Ruta por waypoints": "Route par waypoints",
+ "Ruta por waypoints · sin fotos programadas\n%d puntos · altura %.0f m · velocidad %.1f m/s\nRecorrido %.0f m (ida y vuelta) · tiempo estimado %.1f min": "Route par waypoints · sans photos programmées\n%d points · altitude %.0f m · vitesse %.1f m/s\nParcours %.0f m (aller-retour) · durée estimée %.1f min",
+ "Ruta: toca el mapa para marcar los puntos EN ORDEN (mínimo 2). El dron los recorrerá así a la altura del plan.\n": "Route : touchez la carte pour marquer les points DANS L'ORDRE (min. 2). Le drone les suivra ainsi à l'altitude du plan.\n",
+ "Vuelo estimado de %1$s min: no cabe en una batería de Disco. Acorta la ruta.": "Vol estimé de %1$s min : ne tient pas sur une batterie de Disco. Raccourcissez la route.",
+ "Vuelo estimado de %1$s min: no cabe en una batería. Acorta la ruta.": "Vol estimé de %1$s min : ne tient pas sur une batterie. Raccourcissez la route."
 }

@@ -68,6 +68,8 @@ class MapView(ctx: Context) : View(ctx) {
 
     // Capas
     var polygon: List<LatLon> = emptyList(); set(v) { field = v; invalidate() }
+    /** Ruta por waypoints: los puntos se unen en orden, sin cerrar ni rellenar. */
+    var openPath = false; set(v) { field = v; invalidate() }
     var passes: List<Pair<LatLon, LatLon>> = emptyList(); set(v) { field = v; invalidate() }
     var home: LatLon? = null; set(v) { field = v; invalidate() }
     /** Ala fija: aterrizaje planificado (cono de aproximación, alineación y punto de toma). */
@@ -385,7 +387,7 @@ class MapView(ctx: Context) : View(ctx) {
         if (polygon.isNotEmpty()) {
             val path = Path()
             polygon.forEachIndexed { i, p -> val s = toScreen(p); if (i == 0) path.moveTo(s[0], s[1]) else path.lineTo(s[0], s[1]) }
-            if (polygon.size >= 3) { path.close(); canvas.drawPath(path, polyFill) }
+            if (polygon.size >= 3 && !openPath) { path.close(); canvas.drawPath(path, polyFill) }
             canvas.drawPath(path, polyStroke)
         }
         // Ruta del plan (pantalla de vuelo): hecho en blanco, pendiente en ámbar

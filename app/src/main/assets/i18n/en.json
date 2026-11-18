@@ -992,5 +992,20 @@
  "cerrada": "closed",
  "🌱  Prueba de NDVI en vivo (Sequoia)": "🌱  Live NDVI test (Sequoia)",
  "🌱 NDVI en vivo": "🌱 Live NDVI",
- "🌱 Prueba de NDVI en vivo": "🌱 Live NDVI test"
+ "🌱 Prueba de NDVI en vivo": "🌱 Live NDVI test",
+ "\nDisco: fija también el lanzamiento y el aterrizaje (🛬), como en los mapas.": "\nDisco: also set the launch point and the landing (🛬), as for maps.",
+ "Altura muy baja (<20 m): cuidado con árboles y cables en toda la ruta.": "Very low altitude (<20 m): watch for trees and wires along the whole route.",
+ "DISCO · Ruta por waypoints\n%d puntos · altura %.0f m · crucero %.1f m/s\nRecorrido %.0f m (con la final) · tiempo estimado %.1f min\n%s": "DISCO · Waypoint route\n%d points · altitude %.0f m · cruise %.1f m/s\nDistance %.0f m (with final) · estimated time %.1f min\n%s",
+ "Demasiados puntos (máx. 200).": "Too many points (max. 200).",
+ "El punto más lejano está a %1$s m: mantén el dron a la vista (VLOS).": "The farthest point is %1$s m away: keep the drone in sight (VLOS).",
+ "En los giros la Disco se abre hasta ~%1$s m fuera de la ruta: que no haya obstáculos alrededor.": "In turns the Disco swings up to ~%1$s m off the route: no obstacles around.",
+ "Hay puntos a menos de %1$s m entre sí: la Disco los pasará de largo y girará en círculo para alcanzarlos.": "Some points are less than %1$s m apart: the Disco will overshoot them and circle back to reach them.",
+ "La ruta no esquiva obstáculos: revísala en la ortofoto.": "The route does not avoid obstacles: check it on the orthophoto.",
+ "Marca al menos 2 puntos de ruta.": "Mark at least 2 route points.",
+ "Pulsación larga sobre un punto = borrarlo.": "Long press on a point = delete it.",
+ "Ruta por waypoints": "Waypoint route",
+ "Ruta por waypoints · sin fotos programadas\n%d puntos · altura %.0f m · velocidad %.1f m/s\nRecorrido %.0f m (ida y vuelta) · tiempo estimado %.1f min": "Waypoint route · no scheduled photos\n%d points · altitude %.0f m · speed %.1f m/s\nDistance %.0f m (round trip) · estimated time %.1f min",
+ "Ruta: toca el mapa para marcar los puntos EN ORDEN (mínimo 2). El dron los recorrerá así a la altura del plan.\n": "Route: tap the map to mark the points IN ORDER (min. 2). The drone will fly them that way at the plan altitude.\n",
+ "Vuelo estimado de %1$s min: no cabe en una batería de Disco. Acorta la ruta.": "Estimated flight %1$s min: does not fit in one Disco battery. Shorten the route.",
+ "Vuelo estimado de %1$s min: no cabe en una batería. Acorta la ruta.": "Estimated flight %1$s min: does not fit in one battery. Shorten the route."
 }

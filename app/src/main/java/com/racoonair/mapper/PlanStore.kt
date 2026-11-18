@@ -31,7 +31,7 @@ object PlanStore {
             put("approachDist", f.approachDist); put("approachAlt", f.approachAlt)
             put("elevDiff", f.elevDiff); put("elevSet", f.elevSet); put("droneCamera", f.droneCamera)
         }) }
-        spec3D?.takeIf { it.type.is3D }?.let { s -> j.put("mission3D", JSONObject().apply {
+        spec3D?.takeIf { it.type != MissionType.GRID }?.let { s -> j.put("mission3D", JSONObject().apply {
             put("type", s.type.name); put("objectHeight", s.objectHeight); put("standoff", s.standoff)
             put("rings", s.rings); put("obliqueTilt", s.obliqueTilt); put("minAlt", s.minAlt)
             put("speed", s.speed); put("baseElev", s.baseElev)

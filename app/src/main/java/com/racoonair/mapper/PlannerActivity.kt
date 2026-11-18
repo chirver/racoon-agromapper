@@ -508,16 +508,21 @@ class PlannerActivity : Activity(), MapView.Listener {
     private lateinit var missionRow: View
     /** Las misiones 3D necesitan gimbal inclinable: solo en la app de ANAFI. */
     private val supports3D get() = Flavor.supports(Platform.ANAFI)
+    /** Tipos de misión de esta app: en la de Bluegrass/Disco solo mapa 2D y ruta por waypoints. */
+    private val missionTypes get() = if (supports3D) MissionType.values().toList() else listOf(MissionType.GRID, MissionType.ROUTE)
+    private val isRoute get() = Session.spec3D.type.isRoute
 
     private fun updateMissionUi() {
-        missionRow.visibility = if (supports3D) View.VISIBLE else View.GONE
+        missionRow.visibility = View.VISIBLE
+        if (Session.spec3D.type !in missionTypes) Session.spec3D = Session.spec3D.copy(type = MissionType.GRID)
         val t = Session.spec3D.type
+        if (::map.isInitialized) map.openPath = t.isRoute
         missionBtn.text = "🎯 " + t.label
         spec3DBtn.visibility = if (t.is3D) View.VISIBLE else View.GONE
     }
 
     private fun pickMissionType() {
-        val types = MissionType.values()
+        val types = missionTypes.toTypedArray()
         AlertDialog.Builder(this).setTitle(tr("Tipo de misión"))
             .setSingleChoiceItems(types.map { it.label }.toTypedArray(), types.indexOf(Session.spec3D.type)) { d, i ->
                 d.dismiss()
@@ -761,7 +766,13 @@ class PlannerActivity : Activity(), MapView.Listener {
             }
             map.passes = emptyList(); return
         }
-        if (zone.size < 3) {
+        if (isRoute && zone.size < 2) {
+            stats.text = tr("Ruta: toca el mapa para marcar los puntos EN ORDEN (mínimo 2). El dron los recorrerá así a la altura del plan.\n") +
+                tr("Pulsación larga sobre un punto = borrarlo.") +
+                (if (isDisco) tr("\nDisco: fija también el lanzamiento y el aterrizaje (🛬), como en los mapas.") else "")
+            map.passes = emptyList(); return
+        }
+        if (zone.size < 3 && !isRoute) {
             stats.text = tr("Toca el mapa para marcar las esquinas de la parcela (mínimo 3).\n") +
                 tr("Pulsación larga sobre un punto = borrarlo. Doble toque = acercar.\n\n") +
                 trf("Huella de la cámara a %1\$s m: %2\$s m · GSD %3\$s cm/px", fmt(p.altitude), "%.0f × %.0f".format(p.camera.footprint(p.altitude).first, p.camera.footprint(p.altitude).second), "%.1f".format(p.camera.gsdCm(p.altitude)))
@@ -770,11 +781,15 @@ class PlannerActivity : Activity(), MapView.Listener {
         if (home == null) { stats.text = if (isDisco) tr("Falta el punto de lanzamiento (botón «Lanzam.»).") else tr("Falta la casa (punto de despegue/aterrizaje)."); map.passes = emptyList(); return }
         try {
             val s3 = Session.spec3D
-            val r: PlanResult = if (s3.type.is3D && supports3D) Planner3D.plan(zone, home, p, s3) else GridPlanner.plan(zone, home, p)
+            val r: PlanResult = when {
+                s3.type.isRoute -> RoutePlan(home, p, zone.toList())
+                s3.type.is3D && supports3D -> Planner3D.plan(zone, home, p, s3)
+                else -> GridPlanner.plan(zone, home, p)
+            }
             result = r
             map.passes = r.passes
             val w = ArrayList(r.warnings()); val bl = ArrayList(r.blockers())
-            (r as? GridResult)?.fw?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { w.add(0, it.removePrefix("⛔ ").removePrefix("⚠ ") + tr(" (según la previsión)")) } }
+            ((r as? GridResult)?.fw ?: (r as? RoutePlan)?.fw)?.takeIf { it.landing != null && it.headingSet }?.let { f -> windWarning(f)?.let { w.add(0, it.removePrefix("⛔ ").removePrefix("⚠ ") + tr(" (según la previsión)")) } }
             blockersShown = bl
             stats.text = r.summary() + (if (bl.isEmpty()) "" else "\n⛔ " + bl.joinToString("\n⛔ ")) +
                 (if (w.isEmpty()) "" else "\n⚠ " + w.joinToString("\n⚠ "))
@@ -802,7 +817,7 @@ class PlannerActivity : Activity(), MapView.Listener {
                 try {
                     val txt = r.toMavlink()
                     val plan = FlightPlan.parse(txt) // validación con el mismo lector que el resto de la app
-                    val f = PlanStore.save(this, name, zone, r.params, Session.manualHome, txt, if (supports3D) Session.spec3D else null)
+                    val f = PlanStore.save(this, name, zone, r.params, Session.manualHome, txt, if (supports3D || isRoute) Session.spec3D else null)
                     Session.zoneName = name
                     Crumbs.write("planner: guardado ${f.name} (${plan.items.size} ítems)")
                     if (useAfter) {
@@ -819,7 +834,7 @@ class PlannerActivity : Activity(), MapView.Listener {
     }
 
     private fun exportKml() {
-        if (zone.size < 3) { Toast.makeText(this, tr("Dibuja primero la zona"), Toast.LENGTH_SHORT).show(); return }
+        if (zone.size < (if (isRoute) 2 else 3)) { Toast.makeText(this, tr("Dibuja primero la zona"), Toast.LENGTH_SHORT).show(); return }
         val name = Session.zoneName.ifEmpty { "zona" }
         val d = KmlExport.Doc(trf("Racoon AgroMapper · %1\$s", name)).polygon(trf("Zona %1\$s", name), zone)
         result?.let { r ->
@@ -843,7 +858,7 @@ class PlannerActivity : Activity(), MapView.Listener {
                     zone.clear(); zone.addAll(z.zone); map.highlight = emptyList()
                     Session.fixedWing = z.fixedWing ?: FixedWing(droneCamera = Session.fixedWing.droneCamera)
                     Session.manualHome = z.home; Session.zoneName = z.name; Session.params = z.params
-                    if (supports3D) { Session.spec3D = z.spec3D; updateMissionUi() }
+                    Session.spec3D = if (supports3D || z.spec3D.type.isRoute) z.spec3D else Spec3D(); updateMissionUi()
                     cameraSpinner.setSelection(cameras.indexOf(z.params.camera).coerceAtLeast(0))
                     fAlt.setText(fmt(z.params.altitude)); fFront.setText(fmt(z.params.frontOverlap * 100))
                     fSide.setText(fmt(z.params.sideOverlap * 100)); fSpeed.setText(fmt(z.params.speed))

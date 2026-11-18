@@ -18,8 +18,11 @@ enum class MissionType(val label: String) {
     ORBIT(tr("Órbita alrededor de un objeto (3D)")),
     FACADE(tr("Fachada (rejilla vertical)")),
     /** Barrido rápido con la térmica, sin fotogrametría: el detector de puntos calientes hace el trabajo. */
-    THERMAL_SCAN(tr("Inspección térmica (barrido rápido)"));
-    val is3D get() = this != GRID
+    THERMAL_SCAN(tr("Inspección térmica (barrido rápido)")),
+    /** Ruta por waypoints: recorre los puntos tocados, en orden, sin fotos (todas las plataformas, Disco incluida). */
+    ROUTE(tr("Ruta por waypoints"));
+    val is3D get() = this != GRID && this != ROUTE
+    val isRoute get() = this == ROUTE
 }
 
 /** Parámetros de las misiones 3D. Alturas relativas al despegue. */
@@ -210,7 +213,7 @@ object Planner3D {
             MissionType.OBLIQUE -> oblique(zone, home, p, s)
             MissionType.FACADE -> facade(zone, home, p, s)
             MissionType.THERMAL_SCAN -> thermalScan(zone, home, p, s)
-            MissionType.GRID -> throw IllegalArgumentException("GRID")
+            MissionType.GRID, MissionType.ROUTE -> throw IllegalArgumentException(s.type.name)
         }
     }
 

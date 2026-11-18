@@ -992,5 +992,20 @@
  "cerrada": "chiusa",
  "🌱  Prueba de NDVI en vivo (Sequoia)": "🌱  Prova NDVI dal vivo (Sequoia)",
  "🌱 NDVI en vivo": "🌱 NDVI dal vivo",
- "🌱 Prueba de NDVI en vivo": "🌱 Prova NDVI dal vivo"
+ "🌱 Prueba de NDVI en vivo": "🌱 Prova NDVI dal vivo",
+ "\nDisco: fija también el lanzamiento y el aterrizaje (🛬), como en los mapas.": "\nDisco: fissa anche lancio e atterraggio (🛬), come per le mappe.",
+ "Altura muy baja (<20 m): cuidado con árboles y cables en toda la ruta.": "Quota molto bassa (<20 m): attenzione ad alberi e cavi lungo tutta la rotta.",
+ "DISCO · Ruta por waypoints\n%d puntos · altura %.0f m · crucero %.1f m/s\nRecorrido %.0f m (con la final) · tiempo estimado %.1f min\n%s": "DISCO · Rotta a waypoint\n%d punti · quota %.0f m · crociera %.1f m/s\nPercorso %.0f m (con il finale) · tempo stimato %.1f min\n%s",
+ "Demasiados puntos (máx. 200).": "Troppi punti (max. 200).",
+ "El punto más lejano está a %1$s m: mantén el dron a la vista (VLOS).": "Il punto più lontano è a %1$s m: tieni il drone in vista (VLOS).",
+ "En los giros la Disco se abre hasta ~%1$s m fuera de la ruta: que no haya obstáculos alrededor.": "Nelle virate la Disco si allarga fino a ~%1$s m dalla rotta: nessun ostacolo intorno.",
+ "Hay puntos a menos de %1$s m entre sí: la Disco los pasará de largo y girará en círculo para alcanzarlos.": "Alcuni punti distano meno di %1$s m: la Disco li supererà e girerà in cerchio per raggiungerli.",
+ "La ruta no esquiva obstáculos: revísala en la ortofoto.": "La rotta non evita gli ostacoli: controllala sull'ortofoto.",
+ "Marca al menos 2 puntos de ruta.": "Segna almeno 2 punti di rotta.",
+ "Pulsación larga sobre un punto = borrarlo.": "Pressione lunga su un punto = eliminarlo.",
+ "Ruta por waypoints": "Rotta a waypoint",
+ "Ruta por waypoints · sin fotos programadas\n%d puntos · altura %.0f m · velocidad %.1f m/s\nRecorrido %.0f m (ida y vuelta) · tiempo estimado %.1f min": "Rotta a waypoint · senza foto programmate\n%d punti · quota %.0f m · velocità %.1f m/s\nPercorso %.0f m (andata e ritorno) · tempo stimato %.1f min",
+ "Ruta: toca el mapa para marcar los puntos EN ORDEN (mínimo 2). El dron los recorrerá así a la altura del plan.\n": "Rotta: tocca la mappa per segnare i punti IN ORDINE (min. 2). Il drone li percorrerà così alla quota del piano.\n",
+ "Vuelo estimado de %1$s min: no cabe en una batería de Disco. Acorta la ruta.": "Volo stimato di %1$s min: non basta una batteria della Disco. Accorcia la rotta.",
+ "Vuelo estimado de %1$s min: no cabe en una batería. Acorta la ruta.": "Volo stimato di %1$s min: non basta una batteria. Accorcia la rotta."
 }
